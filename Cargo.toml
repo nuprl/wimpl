@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-wasabi_wasm = { path = "../wasabi_wasm" }
+wasabi_wasm = { git = "https://github.com/danleh/wasabi.git", rev = "b45e81259f86d12539b3726ae2c8704ed4d20c76" }
 lazy_static = "1.4.0"
 
 # For interning function types and some strings.

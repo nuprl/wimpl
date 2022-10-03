@@ -630,8 +630,8 @@ fn wimplify_with_expected_output() {
 
 #[test]
 fn wimplify_should_not_crash_on_realistic_files() {
-    // FIXME Create own wasm inputs directory, from wasm spec test suite and WasmBench.
-    const WASM_TEST_INPUTS_DIR: &str = "../../test-inputs/";
+    // FIXME Create own wasm inputs directory, e.g., from wasm spec test suite and WasmBench.
+    const WASM_TEST_INPUTS_DIR: &str = ".";
     for entry in WalkDir::new(WASM_TEST_INPUTS_DIR) {
         let path = entry.unwrap().path().to_owned();
         let path_str = path.as_os_str().to_string_lossy();
