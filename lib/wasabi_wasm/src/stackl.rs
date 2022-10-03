@@ -1,1 +1,0 @@
-// TODO other extreme: no locals, everything passed via stack values, needs dup/pick instruction, is already in strict SSA form
