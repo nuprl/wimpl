@@ -7,12 +7,8 @@ Hint: an if or else block that drops the value is going to be parsed into wimpl 
         i32.const 0 
 		(if
 		  (then
-		    i32.const 1
-			drop
 		  )
 		  (else
-		    i32.const 0
-			drop
 		  )
 		)                 
     )

@@ -1231,7 +1231,6 @@ fn dewimplify_stmt(
                     instrs.push(instr);
                 }
             }
-            instrs.push(wasm::Instr::End);
         }
         StmtKind::Loop { begin_label, body } => todo!(),
         StmtKind::If {
@@ -1260,8 +1259,10 @@ fn dewimplify_stmt(
             instrs.extend(then_instrs);
             // second check that else body exists and process it
             if let Some(else_body) = else_body {
-                // push the else instruction
-                instrs.push(wasm::Instr::Else);
+                // push the else instruction if the body is not empty
+                if !else_body.0.is_empty() {
+                    instrs.push(wasm::Instr::Else);
+                }
                 // process instructions for the else condition
                 for stmt in else_body.0 {
                     instrs.push(
@@ -1272,6 +1273,10 @@ fn dewimplify_stmt(
                     );
                 }
             }
+
+            // FIXME how do we also insert them at the end of the block???l
+            // if_else instructions end with End
+            instrs.push(wasm::Instr::End);
         }
         StmtKind::Switch {
             index,
@@ -1296,6 +1301,8 @@ fn dewimplify_with_expected_output() {
         .map(|entry| entry.unwrap().path().to_owned())
         .collect();
     files.sort();
+
+    let mut tests = 0;
 
     for wasm_path in files {
         // Find all files, where a <name>.wasm file and a <name>.wimpl file are next to each other.
@@ -1361,8 +1368,12 @@ fn dewimplify_with_expected_output() {
                     wimpl_path.display()
                 );
 
+                tests += 1;
+
                 // TODO call validate_wasm as a shell util from shell wrapper in Rust
             }
         }
     }
+
+    print!("\nWASM files checked: {}\n", tests);
 }

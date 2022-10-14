@@ -1,8 +1,2 @@
-// ??? shall I test with different value types?
-// ??? use property testing here?
 
-module {
-    func f0 () -> () @label0: {
         i32.gt_s(i32.const 3, i32.const 4)
-    }
-}
