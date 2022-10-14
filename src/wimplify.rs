@@ -1231,6 +1231,7 @@ fn dewimplify_stmt(
                     instrs.push(instr);
                 }
             }
+            instrs.push(wasm::Instr::End);l
         }
         StmtKind::Loop { begin_label, body } => todo!(),
         StmtKind::If {
@@ -1273,10 +1274,6 @@ fn dewimplify_stmt(
                     );
                 }
             }
-
-            // FIXME how do we also insert them at the end of the block???l
-            // if_else instructions end with End
-            instrs.push(wasm::Instr::End);
         }
         StmtKind::Switch {
             index,
