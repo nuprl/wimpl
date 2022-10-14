@@ -1,0 +1,1 @@
+f32.trunc(f32.const 5)

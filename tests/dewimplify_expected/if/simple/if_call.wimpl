@@ -1,0 +1,6 @@
+@label1: block {
+  if (i32.const 0) {
+    // ??? how to make a function call in wimpl syntax?
+    i32.const 1
+  }
+}

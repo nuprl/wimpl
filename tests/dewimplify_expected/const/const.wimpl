@@ -1,0 +1,4 @@
+// ??? shall I test with different value types?
+// ??? use property testing here?
+
+i32.const 1
