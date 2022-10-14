@@ -1154,6 +1154,7 @@ fn dewimplify_expr(expr: Expr) -> Vec<wasm::Instr> {
     match expr.kind {
         ExprKind::Const(val) => instrs.push(wasm::Instr::Const(val)),
         // FIXME how to actually process var ref?
+        // TODO local.get happens here
         ExprKind::VarRef(_) => (),
         ExprKind::Load { op, addr } => todo!(),
         ExprKind::MemorySize => todo!(),
@@ -1210,10 +1211,21 @@ fn dewimplify_stmt(
             for i in dewimplify_expr(rhs) {
                 instrs.push(i);
             }
+            // TODO local.get is handled when the variable on rhs
+            // TODO type of local operations is stored in wasm::Local::__
             match lhs {
-                Var::Local(_) => todo!(),
+                // hint: local space in WASM includes all parameters *and* declared locals
+                // TODO indexing starts from parameters to wasm and then hoes to locals
+                // TODO only *local.set* happens here
+                // TODO if haven't seen variable before => initialize it 
+                    // add it to wasm ast Code -> locals -> Local -> PubType 
+                        // Local -> name -> write None (doesn't matter much now)
+                Var::Local(x) => todo!(),
                 Var::Global(_) => todo!(),
-                Var::Stack(_) => todo!(),
+                // TODO try to just push the value on the stack here
+                // TODO for examples see wimplify tests that use varaibles `s0`
+                Var::Stack(_) => (),
+                // hint: for wimpl locals and parameters are separated
                 Var::Param(_) => todo!(),
                 // assign the value of the result type of the block
                 Var::BlockResult(_) => {
@@ -1283,6 +1295,8 @@ fn dewimplify_stmt(
     }
     instrs
 }
+
+// TODO translate and dewimplify function <- a vector of initialized locals is added here
 
 #[test]
 fn dewimplify_with_expected_output() {
