@@ -1,7 +1,8 @@
 //! Conversion from standard WebAssembly to Wimpl.
 
-use std::convert::TryInto;
+use std::{convert::TryInto, fs::remove_file};
 
+use test_utilities;
 use wasabi_wasm as wasm;
 
 use crate::*;
@@ -1217,9 +1218,9 @@ fn dewimplify_stmt(
                 // hint: local space in WASM includes all parameters *and* declared locals
                 // TODO indexing starts from parameters to wasm and then hoes to locals
                 // TODO only *local.set* happens here
-                // TODO if haven't seen variable before => initialize it 
-                    // add it to wasm ast Code -> locals -> Local -> PubType 
-                        // Local -> name -> write None (doesn't matter much now)
+                // TODO if haven't seen variable before => initialize it
+                // add it to wasm ast Code -> locals -> Local -> PubType
+                // Local -> name -> write None (doesn't matter much now)
                 Var::Local(x) => todo!(),
                 Var::Global(_) => todo!(),
                 // TODO try to just push the value on the stack here
@@ -1243,7 +1244,7 @@ fn dewimplify_stmt(
                     instrs.push(instr);
                 }
             }
-            instrs.push(wasm::Instr::End);l
+            instrs.push(wasm::Instr::End);
         }
         StmtKind::Loop { begin_label, body } => todo!(),
         StmtKind::If {
@@ -1313,7 +1314,9 @@ fn dewimplify_with_expected_output() {
         .collect();
     files.sort();
 
-    let mut tests = 0;
+    // FIXME delete debug
+    // counter for the number of ast-to-ast comparisons passed
+    let mut ast_tests = 0;
 
     for wasm_path in files {
         // Find all files, where a <name>.wasm file and a <name>.wimpl file are next to each other.
@@ -1333,7 +1336,7 @@ fn dewimplify_with_expected_output() {
                 let instrs_from_wasm = module.0.functions[0].instrs();
 
                 // FIXME delete debug
-                println!("INSTRS FROM WASM:\n {:#?}", instrs_from_wasm);
+                println!("\nINSTRS FROM WASM:\n {:#?}", instrs_from_wasm);
 
                 let wimpl_module = Module::from_wasm_file(&wasm_path).unwrap();
 
@@ -1346,13 +1349,13 @@ fn dewimplify_with_expected_output() {
                     .expect("the first function of the example should not be imported");
 
                 // FIXME delete debug
-                println!("WIMPL FROM WASM:\n {:#?}", actual);
+                println!("\nWIMPL FROM WASM:\n {:#?}", actual);
 
                 // Parse the Wimpl file into an AST.
                 let stmts =
                     Stmt::from_text_file(&wimpl_path).expect("could not parse Wimpl text file");
                 // FIXME delete debug
-                println!("WIMPL FROM WIMPL:\n {:#?}", stmts);
+                println!("\nWIMPL FROM WIMPL:\n {:#?}", stmts);
                 // Initialize a vector of Instructions
                 let mut instrs_from_wimpl = Vec::new();
                 // Push the dewimplified instruction into the vector
@@ -1368,9 +1371,6 @@ fn dewimplify_with_expected_output() {
                 // FIXME change that  when implementing the translation of several functions
                 instrs_from_wimpl.push(wasm::Instr::End);
 
-                // FIXME delete debug
-                println!("INSTRS FROM WIMPL:\n {:#?}", instrs_from_wimpl);
-
                 assert_eq!(
                     instrs_from_wasm,
                     instrs_from_wimpl,
@@ -1379,12 +1379,50 @@ fn dewimplify_with_expected_output() {
                     wimpl_path.display()
                 );
 
-                tests += 1;
+                ast_tests += 1;
 
-                // TODO call validate_wasm as a shell util from shell wrapper in Rust
+                // TODO abstract into a utility function?
+                // store a vector of instructions into a WASM Module
+                // init a wasm module
+                let mut m = wasm::Module::new();
+                // add functions to the module
+                // currently supports only one function
+                m.functions = vec![wasm::Function::new(
+                    wasm::FunctionType::new(&[], &[]), // FIXME no input or result types provided in the current implementation of the test framework – change when functions with inputs/results are implemented
+                    wasm::Code::new(),
+                    vec!["test".to_string()],
+                )];
+                // provide instructions vector generated from wimpl as a body of the function code
+                m.functions[0]
+                    .code_mut()
+                    .expect("No code present in this function!")
+                    .body = instrs_from_wimpl;
+
+                // FIXME: debug - delete
+                print!("\n NEW MODULE: {:?}\n", m);
+
+                // set up a temporary test file
+                // copy wasm path
+                let mut p = wasm_path.to_path_buf();
+                // extract the part of the file name string before the extension
+                let mut fl = p.file_stem().expect("Expect a file name").to_os_string();
+                // modify the file name string with `_temp_' and an extension
+                fl.push("_temp.wasm");
+                // set new file name
+                p.set_file_name(fl);
+
+                // write binary to a file at the path given above
+                m.to_file(&p);
+            
+                // check that the validation is successful    
+                assert!(test_utilities::wasm_validate(&p.as_path()) == Ok(()));
+
+                // delete a temporary test file
+                remove_file(p);
+
             }
         }
     }
 
-    print!("\nWASM files checked: {}\n", tests);
+    print!("\nASTs compared: {}\n", ast_tests);
 }
