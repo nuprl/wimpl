@@ -1,0 +1,237 @@
+// FIXME delete this file
+
+OLD WASM MODULE (
+    Module {
+        name: None,
+        functions: [
+            Function {
+                type_: GoedelNumber {
+                    inputs: 5,
+                    results: 1,
+                },
+                code: Present(
+                    Code {
+                        locals: [
+                            Local {
+                                type_: I32,
+                                name: None,
+                            },
+                            Local {
+                                type_: I32,
+                                name: None,
+                            },
+                            Local {
+                                type_: I32,
+                                name: None,
+                            },
+                            Local {
+                                type_: I32,
+                                name: None,
+                            },
+                        ],
+                        body: [
+                            Local(
+                                Get,
+                                Local 0,
+                            ),
+                            Local(
+                                Get,
+                                Local 1,
+                            ),
+                            Binary(
+                                I32Add,
+                            ),
+                            Local(
+                                Set,
+                                Local 0,
+                            ),
+                            Const(
+                                I32(
+                                    30,
+                                ),
+                            ),
+                            Local(
+                                Tee,
+                                Local 1,
+                            ),
+                            Const(
+                                I32(
+                                    31,
+                                ),
+                            ),
+                            Local(
+                                Set,
+                                Local 2,
+                            ),
+                            Const(
+                                I32(
+                                    42,
+                                ),
+                            ),
+                            Local(
+                                Set,
+                                Local 3,
+                            ),
+                            Local(
+                                Get,
+                                Local 2,
+                            ),
+                            Binary(
+                                I32Add,
+                            ),
+                            Local(
+                                Get,
+                                Local 0,
+                            ),
+                            Binary(
+                                I32Add,
+                            ),
+                            End,
+                        ],
+                    },
+                ),
+                export: [],
+                name: None,
+                param_names: [],
+            },
+        ],
+        globals: [],
+        tables: [],
+        memories: [],
+        start: None,
+        custom_sections: [],
+            metadata: ModuleMetadata {
+                used_extensions: [],
+            },
+    },
+    Offsets {
+        sections: [
+            (
+                Type,
+                10,
+            ),
+            (
+                Function,
+                19,
+            ),
+            (
+                Code,
+                23,
+            ),
+        ],
+        functions_code: [
+            (
+                Function 0,
+                25,
+            ),
+        ],
+    },
+    [],
+)
+
+
+INSTRS FROM WASM:
+ [
+    Local(
+        Get,
+        Local 0,
+    ),
+    Local(
+        Get,
+        Local 1,
+    ),
+    Binary(
+        I32Add,
+    ),
+    Local(
+        Set,
+        Local 0,
+    ),
+    Const(
+        I32(
+            30,
+        ),
+    ),
+    Local(
+        Tee,
+        Local 1,
+    ),
+    Const(
+        I32(
+            31,
+        ),
+    ),
+    Local(
+        Set,
+        Local 2,
+    ),
+    Const(
+        I32(
+            42,
+        ),
+    ),
+    Local(
+        Set,
+        Local 3,
+    ),
+    Local(
+        Get,
+        Local 2,
+    ),
+    Binary(
+        I32Add,
+    ),
+    Local(
+        Get,
+        Local 0,
+    ),
+    Binary(
+        I32Add,
+    ),
+    End,
+]
+ 
+        id: #520,
+        kind: Assign {
+            lhs: Return(
+                0,
+            ),
+            type_: I32,
+            rhs: Expr {
+                id: #519,
+                kind: Binary(
+                    I32Add,
+                    Expr {
+                        id: #517,
+                        kind: Binary(
+                            I32Add,
+                            Expr {
+                                id: #515,
+                                kind: VarRef(
+                                    Stack(
+                                        0,
+                                    ),
+                                ),
+                            },
+                            Expr {
+                                id: #516,
+                                kind: VarRef(
+                                    Local(
+                                        0,
+                                    ),
+                                ),
+                            },
+                        ),
+                    },
+                    Expr {
+                        id: #518,
+                        kind: VarRef(
+                            Param(
+                                0,
+                            ),
+                        ),
+                    },
+                ),
+            },
+        },
+    

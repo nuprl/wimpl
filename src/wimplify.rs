@@ -1,9 +1,12 @@
 //! Conversion from standard WebAssembly to Wimpl.
 
-use std::{convert::TryInto, fs::remove_file};
+use std::{
+    collections::HashSet, convert::TryInto, fs::remove_file, iter::Map, marker::PhantomData,
+};
 
 use test_utilities;
 use wasabi_wasm as wasm;
+use wasm::Local;
 
 use crate::*;
 
@@ -1150,18 +1153,48 @@ pub fn wimplify(module: &wasm::Module) -> Result<Module, String> {
     })
 }
 
-fn dewimplify_expr(expr: Expr) -> Vec<wasm::Instr> {
+// TODO abstract dewimplify into a separate module
+
+// translate a given wimpl expression into a vector of wasm instructions
+fn dewimplify_expr(
+    expr: Expr,
+    params: &mut HashMap<u32, ValType>,
+    type_: Option<ValType>,
+) -> Vec<wasm::Instr> {
     let mut instrs = Vec::new();
     match expr.kind {
         ExprKind::Const(val) => instrs.push(wasm::Instr::Const(val)),
-        // FIXME how to actually process var ref?
-        // TODO local.get happens here
-        ExprKind::VarRef(_) => (),
+        // match the types of VarRef
+        ExprKind::VarRef(v) => {
+            match v {
+                Var::Local(idx) => {
+                    // if the local is referenced, get its value
+                    instrs.push(wasm::Instr::Local(
+                        wasm::LocalOp::Get,
+                        // the index of the local is offset from the number of parameters
+                        wasm::Idx::from(params.len() as u32 + idx),
+                    ));
+                }
+                Var::Global(_) => todo!(),
+                Var::Stack(_) => (),
+                // update the function param set if the referenced param is first encountered
+                Var::Param(idx) => {
+                    params.insert(idx, type_.expect("Expected a type of value passed in!"));
+                    instrs.push(wasm::Instr::Local(
+                        wasm::LocalOp::Get,
+                        // for params, index is as is
+                        wasm::Idx::from(idx),
+                    ));
+                }
+                Var::BlockResult(_) => (),
+                Var::Return(_) => (),
+            }
+        }
         ExprKind::Load { op, addr } => todo!(),
         ExprKind::MemorySize => todo!(),
         ExprKind::MemoryGrow { pages } => todo!(),
         ExprKind::Unary(op, e) => {
-            for i in dewimplify_expr(*e) {
+            for i in dewimplify_expr(*e, params, type_) {
                 instrs.push(i);
             }
             instrs.push(wasm::Instr::Unary(op));
@@ -1169,14 +1202,13 @@ fn dewimplify_expr(expr: Expr) -> Vec<wasm::Instr> {
         ExprKind::Binary(op, ex1, ex2) => {
             // hint: * is for unboxing (dereferencing) a heap pointer
             // unroll the result of the expression into the vector of instructions
-            for instr in dewimplify_expr(*ex1) {
+            for instr in dewimplify_expr(*ex1, params, type_) {
                 instrs.push(instr)
             }
-            for instr in dewimplify_expr(*ex2) {
+            for instr in dewimplify_expr(*ex2, params, type_) {
                 instrs.push(instr)
             }
             instrs.push(wasm::Instr::Binary(op));
-            // FIXME add Drop and End instructions
         }
         ExprKind::Call { func, args } => todo!(),
         ExprKind::CallIndirect {
@@ -1188,13 +1220,15 @@ fn dewimplify_expr(expr: Expr) -> Vec<wasm::Instr> {
     instrs
 }
 
+// translate a given wimpl statement into a vector of wasm instructions
 fn dewimplify_stmt(
     stmt: Stmt,
-    stack: &Vec<BlockType>,
-    mut result: &mut BlockType,
+    mut blockresult: &mut BlockType,
+    params: &mut HashMap<u32, ValType>,
+    locals: &mut HashMap<u32, Local>,
+    returns: &mut HashMap<u32, ValType>,
 ) -> Vec<wasm::Instr> {
     let mut instrs = Vec::new();
-    // create a stack if it doesn't exist
 
     match stmt.kind {
         // hint: :: is the path separator
@@ -1202,37 +1236,60 @@ fn dewimplify_stmt(
         StmtKind::Unreachable => todo!(),
         // process all expressions with dewimplify_expr
         StmtKind::Expr(e) => {
-            for instr in dewimplify_expr(e) {
+            for instr in dewimplify_expr(e, params, None) {
                 instrs.push(instr);
             }
             instrs.push(wasm::Instr::Drop);
         }
         StmtKind::Assign { lhs, type_, rhs } => {
-            // process the righthand size expression
-            for i in dewimplify_expr(rhs) {
+            // process the righthand side expression
+            for i in dewimplify_expr(rhs, params, Some(type_)) {
                 instrs.push(i);
             }
-            // TODO local.get is handled when the variable on rhs
-            // TODO type of local operations is stored in wasm::Local::__
             match lhs {
-                // hint: local space in WASM includes all parameters *and* declared locals
-                // TODO indexing starts from parameters to wasm and then hoes to locals
-                // TODO only *local.set* happens here
-                // TODO if haven't seen variable before => initialize it
-                // add it to wasm ast Code -> locals -> Local -> PubType
-                // Local -> name -> write None (doesn't matter much now)
-                Var::Local(x) => todo!(),
+                // process local variable assignments
+                Var::Local(idx) => {
+                    // insert a new local variable with a given type and id to a list of locals
+                    if locals.insert(
+                        idx,
+                        Local {
+                            type_: type_,
+                            name: None,
+                        },
+                    ) == None
+                    {
+                        // delete the last pushed instr if it was just an initialization of a local
+                        instrs.truncate(instrs.len() - 1);
+                    } else {
+                        // if the local already existed in the list of locals, set its value
+                        instrs.push(wasm::Instr::Local(
+                            wasm::LocalOp::Set,
+                            // the index of the local is offset from the number of parameters
+                            wasm::Idx::from(params.len() as u32 + idx),
+                        ));
+                    };
+                }
+                // ??? I assume this works similar to locals except the param counting part
                 Var::Global(_) => todo!(),
-                // TODO try to just push the value on the stack here
-                // TODO for examples see wimplify tests that use varaibles `s0`
                 Var::Stack(_) => (),
-                // hint: for wimpl locals and parameters are separated
-                Var::Param(_) => todo!(),
+                // update the function param map if the referenced param is first encountered
+                Var::Param(idx) => {
+                    params.insert(idx, type_);
+                    // for params, always set their value
+                    instrs.push(wasm::Instr::Local(
+                        wasm::LocalOp::Set,
+                        // for params, the index is as is
+                        wasm::Idx::from(idx),
+                    ));
+                }
                 // assign the value of the result type of the block
                 Var::BlockResult(_) => {
-                    *result = wasm::BlockType(Some(type_));
+                    *blockresult = wasm::BlockType(Some(type_));
                 }
-                Var::Return(_) => todo!(),
+                // update the function returns map
+                Var::Return(idx) => {
+                    returns.insert(idx, type_);
+                }
             }
         }
         StmtKind::Store { op, addr, value } => todo!(),
@@ -1240,7 +1297,7 @@ fn dewimplify_stmt(
         // process statements inside the block body
         StmtKind::Block { body, end_label } => {
             for stmt in body.0 {
-                for instr in dewimplify_stmt(stmt, stack, result) {
+                for instr in dewimplify_stmt(stmt, blockresult, params, locals, returns) {
                     instrs.push(instr);
                 }
             }
@@ -1253,21 +1310,21 @@ fn dewimplify_stmt(
             else_body,
         } => {
             // process instructions for the if condition
-            for instr in dewimplify_expr(condition) {
+            for instr in dewimplify_expr(condition, params, None) {
                 instrs.push(instr)
             }
 
             let mut then_instrs = Vec::new();
             // first process a then body
             for stmt in if_body.0 {
-                for i in dewimplify_stmt(stmt, stack, result) {
+                for i in dewimplify_stmt(stmt, blockresult, params, locals, returns) {
                     then_instrs.push(i);
                 }
             }
             // push IF with Blocktype
             // if the the body of the IF block is empty then the type of the Blockresult is None
             // if the body of the IF block contains at least one statement, then the type of the Blockresult of Assign statement is the type of the last statement in the body
-            instrs.push(wasm::Instr::If(*result));
+            instrs.push(wasm::Instr::If(*blockresult));
             // push the then block instructions
 
             instrs.extend(then_instrs);
@@ -1280,7 +1337,7 @@ fn dewimplify_stmt(
                 // process instructions for the else condition
                 for stmt in else_body.0 {
                     instrs.push(
-                        dewimplify_stmt(stmt, stack, result)
+                        dewimplify_stmt(stmt, blockresult, params, locals, returns)
                             .into_iter()
                             .next()
                             .expect("error"),
@@ -1297,7 +1354,8 @@ fn dewimplify_stmt(
     instrs
 }
 
-// TODO translate and dewimplify function <- a vector of initialized locals is added here
+// TODO translate and dewimplify function
+// a vector of initialized locals is added here
 
 #[test]
 fn dewimplify_with_expected_output() {
@@ -1330,56 +1388,156 @@ fn dewimplify_with_expected_output() {
                     wasm_path.display()
                 ));
 
-                println!("{:#?}", module);
+                // FIXME delete debug
+                println!("\nWASM MODULE FROM WASM {:#?}\n", module);
 
                 // get the vector of instructions from the wasm module
                 let instrs_from_wasm = module.0.functions[0].instrs();
+                // get the vector of locals from the wasm module
+                // copying it into a vector since otherwise it has to be borrowed
+                // FIXME make more idiomatic without unwrap?
+                    // .locals for functions[i] won't help since it returns an <Idx, Local> iterator, where Idx has the true Idx of the local (= local_idx + param_count) – not the index of the local in wasm ast
+                let locals_from_wasm = module.0.functions[0].code().unwrap().locals.to_vec();
+                // get the wasm function type
+                let ftype_wasm = module.0.functions[0].type_;
 
                 // FIXME delete debug
-                println!("\nINSTRS FROM WASM:\n {:#?}", instrs_from_wasm);
+                // println!("\nINSTRS FROM WASM:\n {:#?}", instrs_from_wasm);
 
-                let wimpl_module = Module::from_wasm_file(&wasm_path).unwrap();
+                // FIXME why do I need to get a wimpl module from wasm?
+                // let wimpl_module = Module::from_wasm_file(&wasm_path).unwrap();
 
                 // Every wimpl file contains only a sequence of statements, not a whole module.
                 // Compare the first function from the .wasm binary, with all instructions of the
                 // .wimpl text file.
-                let actual = wimpl_module.functions[0]
-                    .clone()
-                    .body
-                    .expect("the first function of the example should not be imported");
+                // let actual = wimpl_module.functions[0]
+                //     .clone()
+                //     .body
+                //     .expect("the first function of the example should not be imported");
 
                 // FIXME delete debug
-                println!("\nWIMPL FROM WASM:\n {:#?}", actual);
+                // println!("\nWIMPL MODULE FROM WASM:\n {:#?}", wimpl_module);
+
+                // FIXME delete debug
+                // println!("\nWIMPL STMTS FROM WASM:\n {:#?}", actual);
+
+                // ??? ⚠️ how can we parse the whole wimmpl module from wimpl file to get access to Function type_ in order to get the number of arguments from there to be able to easily index the locals?
+                    // search for "type" in wimplify.rs to 21 of 63 : let n_args = context.module.function(*func_index).type_.inputs().len();
+                        // this might be helpful to get the number of function args from the Function type_
 
                 // Parse the Wimpl file into an AST.
                 let stmts =
                     Stmt::from_text_file(&wimpl_path).expect("could not parse Wimpl text file");
                 // FIXME delete debug
                 println!("\nWIMPL FROM WIMPL:\n {:#?}", stmts);
+
+                // init the value of the result of the given block of code in the function
+                let mut blockresult: wasm::BlockType = BlockType(None);
+
+                // init the list of locals acquired from wimpl <usize idx, Local loc>
+                let mut locals_from_wimpl = HashMap::new();
+                // init the list of returns acquired from wimpl <usize idx, ValType type_>
+                let mut returns_from_wimpl = HashMap::new();
+
+                // FIXME can we make this more idiomatic than making two passes of the same function and then clearing the maps?
+                // init a set of function param indeces
+                let mut params_from_wimpl = HashMap::new();
+                // count a number of referenced wimpl function parameters in the given vector of statements
+                for stmt in stmts.to_owned() {
+                    dewimplify_stmt(
+                        stmt,
+                        &mut blockresult,
+                        &mut params_from_wimpl,
+                        &mut locals_from_wimpl,
+                        &mut returns_from_wimpl,
+                    );
+                }
+                // clear up the map of locals after the first pass of dewimplify to count the params
+                locals_from_wimpl.clear();
+                // clear up the map of returns after the first pass of dewimplify to count the params
+                returns_from_wimpl.clear();
+
+                
                 // Initialize a vector of Instructions
                 let mut instrs_from_wimpl = Vec::new();
-                // Push the dewimplified instruction into the vector
-                let mut result: wasm::BlockType = BlockType(None);
-                for stmt in stmts {
-                    // FIXME shall the stack be defined within the loop or outside?
-                    let stack = Vec::new();
-                    let instrs = dewimplify_stmt(stmt, &stack, &mut result);
-                    // unroll the result of the dewimplification into the result vector
+                // Push the dewimplified instructions into the vector
+                for stmt in stmts.to_owned() {
+                    // TODO change processing here to get other parts of the module besides the instructions
+                    let instrs = dewimplify_stmt(
+                        stmt,
+                        &mut blockresult,
+                        &mut params_from_wimpl,
+                        &mut locals_from_wimpl,
+                        &mut returns_from_wimpl,
+                    );
+                    // unroll the result of the dewimplification into the vector of instructions
                     instrs_from_wimpl.extend(instrs);
                 }
+
+                // FIXME delete debug
+                print!(
+                    "\n PARAMS {:?} AND PARAM COUNT {} \n",
+                    &params_from_wimpl,
+                    &params_from_wimpl.len()
+                );
+                // FIXME delete debug
+                print!(
+                    "\n RETURNS {:?} \n",
+                    &returns_from_wimpl,
+                );
 
                 // FIXME change that  when implementing the translation of several functions
                 instrs_from_wimpl.push(wasm::Instr::End);
 
+                // FIXME can I make this more idiomatic?
+                // convert the hashmap into a vector of locals
+                let mut temp = Vec::new();
+                temp = locals_from_wimpl.iter().collect();
+                temp.sort_by(|a, b| (*a).0.cmp((*b).0));
+                // redifine the type and value of locals_from_wimpl
+                let locals_from_wimpl = temp.iter().map(|t| (*t).1.to_owned()).collect();
+
+                // create a list of param types to define a function type
+                let mut param_types = Vec::new();
+                param_types = params_from_wimpl.values().cloned().collect();
+                // create a list of return types to define a function type
+                let mut return_types = Vec::new();
+                return_types = returns_from_wimpl.values().cloned().collect();
+                // define the function type
+                let ftype = wasm::FunctionType::new(&param_types, &return_types);
+                
+                // checking that function type is the same
+                assert_eq!(
+                    ftype_wasm,
+                    ftype,
+                    //FIXME get rid of uppercase
+                    "\n FUNCTION TYPE from {} isn't the same as from {}\n",
+                    wasm_path.display(),
+                    wimpl_path.display()
+                );
+
+                // checking that function locals are the same
+                assert_eq!(
+                    locals_from_wasm,
+                    locals_from_wimpl,
+                    //FIXME get rid of uppercase
+                    "\nLOCALS from {} aren't the same as from {}\n",
+                    wasm_path.display(),
+                    wimpl_path.display()
+                );
+
+                // checking that function instructions are the same
                 assert_eq!(
                     instrs_from_wasm,
                     instrs_from_wimpl,
-                    "Instructions from {} aren't the same as from {}",
+                    //FIXME get rid of uppercase
+                    "\nINSTRUCTIONS from {} aren't the same as from {}\n",
                     wasm_path.display(),
                     wimpl_path.display()
                 );
 
                 ast_tests += 1;
+
 
                 // TODO abstract into a utility function?
                 // store a vector of instructions into a WASM Module
@@ -1388,7 +1546,7 @@ fn dewimplify_with_expected_output() {
                 // add functions to the module
                 // currently supports only one function
                 m.functions = vec![wasm::Function::new(
-                    wasm::FunctionType::new(&[], &[]), // FIXME no input or result types provided in the current implementation of the test framework – change when functions with inputs/results are implemented
+                    ftype,
                     wasm::Code::new(),
                     vec!["test".to_string()],
                 )];
@@ -1397,11 +1555,15 @@ fn dewimplify_with_expected_output() {
                     .code_mut()
                     .expect("No code present in this function!")
                     .body = instrs_from_wimpl;
+                // provide locals vector generated from wimpl as a locals property of the function
+                m.functions[0]
+                    .code_mut()
+                    .expect("No code present in this function!")
+                    .locals = locals_from_wimpl;
 
                 // FIXME: debug - delete
-                print!("\n NEW MODULE: {:?}\n", m);
+                print!("\n NEW WASM MODULE: {:?}\n", m);
 
-                // set up a temporary test file
                 // copy wasm path
                 let mut p = wasm_path.to_path_buf();
                 // extract the part of the file name string before the extension
@@ -1413,16 +1575,16 @@ fn dewimplify_with_expected_output() {
 
                 // write binary to a file at the path given above
                 m.to_file(&p);
-            
-                // check that the validation is successful    
+
+                // check that the validation is successful
                 assert!(test_utilities::wasm_validate(&p.as_path()) == Ok(()));
 
                 // delete a temporary test file
                 remove_file(p);
-
             }
         }
     }
 
+    // FIXME delete debug
     print!("\nASTs compared: {}\n", ast_tests);
 }
