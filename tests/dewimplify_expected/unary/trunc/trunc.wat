@@ -4,4 +4,5 @@
     f32.trunc
     drop 
   )
+  (export "test" (func $0))
 )

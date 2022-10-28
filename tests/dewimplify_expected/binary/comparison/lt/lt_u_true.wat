@@ -5,4 +5,5 @@
     i32.lt_u
     drop 
   )
+  (export "test" (func $0))
 )

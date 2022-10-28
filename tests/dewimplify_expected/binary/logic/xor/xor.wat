@@ -5,4 +5,5 @@
     i32.xor
     drop 
   )
+  (export "test" (func $0))
 )

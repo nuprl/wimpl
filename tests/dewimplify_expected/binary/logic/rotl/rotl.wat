@@ -5,4 +5,5 @@
     i32.rotl
     drop 
   )
+  (export "test" (func $0))
 )

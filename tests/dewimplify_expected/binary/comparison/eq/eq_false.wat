@@ -5,4 +5,5 @@
     i32.eq
     drop 
   )
+  (export "test" (func $0))
 )

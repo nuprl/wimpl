@@ -5,4 +5,5 @@
     i32.shl
     drop 
   )
+  (export "test" (func $0))
 )

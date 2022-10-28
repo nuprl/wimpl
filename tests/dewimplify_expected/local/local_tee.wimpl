@@ -16,7 +16,7 @@ s0: i32 = l0
 l0: i32 = i32.const 7
 i32.add(s0, l0)
 
-// FIXME when local.tee is supported
+// FIXME @Dmitrii when local.tee is supported
 // Exact same code for local.set + local.get:
 // l0: i32 = i32.const 3
 // s1: i32 = l0

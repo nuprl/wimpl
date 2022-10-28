@@ -6,4 +6,5 @@
     f32.abs
     drop 
   )
+  (export "test" (func $0))
 )

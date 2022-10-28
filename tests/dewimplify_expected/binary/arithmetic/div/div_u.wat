@@ -5,4 +5,6 @@
     i32.div_u
     drop
   )
+  
+  (export "test" (func $0))
 )

@@ -1153,7 +1153,7 @@ pub fn wimplify(module: &wasm::Module) -> Result<Module, String> {
     })
 }
 
-// TODO abstract dewimplify into a separate module
+// TODO @Dmitrii abstract dewimplify into a separate module
 
 // translate a given wimpl expression into a vector of wasm instructions
 fn dewimplify_expr(
@@ -1200,7 +1200,7 @@ fn dewimplify_expr(
             instrs.push(wasm::Instr::Unary(op));
         }
         ExprKind::Binary(op, ex1, ex2) => {
-            // hint: * is for unboxing (dereferencing) a heap pointer
+            // hint @Dmitrii : * is for unboxing (dereferencing) a heap pointer
             // unroll the result of the expression into the vector of instructions
             for instr in dewimplify_expr(*ex1, params, type_) {
                 instrs.push(instr)
@@ -1231,8 +1231,8 @@ fn dewimplify_stmt(
     let mut instrs = Vec::new();
 
     match stmt.kind {
-        // hint: :: is the path separator
-        // hint: () is the destructuring syntax
+        // hint @Dmitrii : is the path separator
+        // hint @Dmitrii : () is the destructuring syntax
         StmtKind::Unreachable => todo!(),
         // process all expressions with dewimplify_expr
         StmtKind::Expr(e) => {
@@ -1269,7 +1269,7 @@ fn dewimplify_stmt(
                         ));
                     };
                 }
-                // ??? I assume this works similar to locals except the param counting part
+                // ??? @Dmitrii I assume this works similar to locals except the param counting part
                 Var::Global(_) => todo!(),
                 Var::Stack(_) => (),
                 // update the function param map if the referenced param is first encountered
@@ -1354,7 +1354,7 @@ fn dewimplify_stmt(
     instrs
 }
 
-// TODO translate and dewimplify function
+// TODO @Dmitrii translate and dewimplify function
 // a vector of initialized locals is added here
 
 #[test]
@@ -1372,11 +1372,14 @@ fn dewimplify_with_expected_output() {
         .collect();
     files.sort();
 
-    // FIXME delete debug
+    // FIXME @Dmitrii delete debug
     // counter for the number of ast-to-ast comparisons passed
     let mut ast_tests = 0;
 
     for wasm_path in files {
+        // FIXME @Dmitrii added this for debug to target a specific file name for testing
+        // if let Some("local") = wasm_path.file_stem().and_then(|os_str| os_str.to_str()) {
+
         // Find all files, where a <name>.wasm file and a <name>.wimpl file are next to each other.
         if let Some("wasm") = wasm_path.extension().and_then(|os_str| os_str.to_str()) {
             let wimpl_path = wasm_path.with_extension("wimpl");
@@ -1388,23 +1391,26 @@ fn dewimplify_with_expected_output() {
                     wasm_path.display()
                 ));
 
-                // FIXME delete debug
-                println!("\nWASM MODULE FROM WASM {:#?}\n", module);
+                // FIXME @Dmitrii delete debug
+                println!("\n{:?}", wimpl_path);
+
+                // FIXME @Dmitrii delete debug
+                // println!("\nWASM MODULE FROM WASM {:#?}\n", module);
 
                 // get the vector of instructions from the wasm module
                 let instrs_from_wasm = module.0.functions[0].instrs();
                 // get the vector of locals from the wasm module
                 // copying it into a vector since otherwise it has to be borrowed
-                // FIXME make more idiomatic without unwrap?
-                    // .locals for functions[i] won't help since it returns an <Idx, Local> iterator, where Idx has the true Idx of the local (= local_idx + param_count) – not the index of the local in wasm ast
+                // FIXME @Dmitrii make more idiomatic without unwrap?
+                // .locals for functions[i] won't help since it returns an <Idx, Local> iterator, where Idx has the true Idx of the local (= local_idx + param_count) – not the index of the local in wasm ast
                 let locals_from_wasm = module.0.functions[0].code().unwrap().locals.to_vec();
                 // get the wasm function type
                 let ftype_wasm = module.0.functions[0].type_;
 
-                // FIXME delete debug
+                // FIXME @Dmitrii delete debug
                 // println!("\nINSTRS FROM WASM:\n {:#?}", instrs_from_wasm);
 
-                // FIXME why do I need to get a wimpl module from wasm?
+                // FIXME @Dmitrii hy do I need to get a wimpl module from wasm?
                 // let wimpl_module = Module::from_wasm_file(&wasm_path).unwrap();
 
                 // Every wimpl file contains only a sequence of statements, not a whole module.
@@ -1415,21 +1421,17 @@ fn dewimplify_with_expected_output() {
                 //     .body
                 //     .expect("the first function of the example should not be imported");
 
-                // FIXME delete debug
+                // FIXME @Dmitrii delete debug
                 // println!("\nWIMPL MODULE FROM WASM:\n {:#?}", wimpl_module);
 
-                // FIXME delete debug
+                // FIXME @Dmitrii delete debug
                 // println!("\nWIMPL STMTS FROM WASM:\n {:#?}", actual);
-
-                // ??? ⚠️ how can we parse the whole wimmpl module from wimpl file to get access to Function type_ in order to get the number of arguments from there to be able to easily index the locals?
-                    // search for "type" in wimplify.rs to 21 of 63 : let n_args = context.module.function(*func_index).type_.inputs().len();
-                        // this might be helpful to get the number of function args from the Function type_
 
                 // Parse the Wimpl file into an AST.
                 let stmts =
                     Stmt::from_text_file(&wimpl_path).expect("could not parse Wimpl text file");
-                // FIXME delete debug
-                println!("\nWIMPL FROM WIMPL:\n {:#?}", stmts);
+                // FIXME @Dmitrii delete debug
+                // println!("\nWIMPL FROM WIMPL:\n {:#?}", stmts);
 
                 // init the value of the result of the given block of code in the function
                 let mut blockresult: wasm::BlockType = BlockType(None);
@@ -1439,7 +1441,7 @@ fn dewimplify_with_expected_output() {
                 // init the list of returns acquired from wimpl <usize idx, ValType type_>
                 let mut returns_from_wimpl = HashMap::new();
 
-                // FIXME can we make this more idiomatic than making two passes of the same function and then clearing the maps?
+                // FIXME @Dmitrii can we make this more idiomatic than making two passes of the same function and then clearing the maps?
                 // init a set of function param indeces
                 let mut params_from_wimpl = HashMap::new();
                 // count a number of referenced wimpl function parameters in the given vector of statements
@@ -1457,12 +1459,11 @@ fn dewimplify_with_expected_output() {
                 // clear up the map of returns after the first pass of dewimplify to count the params
                 returns_from_wimpl.clear();
 
-                
                 // Initialize a vector of Instructions
                 let mut instrs_from_wimpl = Vec::new();
                 // Push the dewimplified instructions into the vector
                 for stmt in stmts.to_owned() {
-                    // TODO change processing here to get other parts of the module besides the instructions
+                    // TODO @Dmitrii change processing here to get other parts of the module besides the instructions
                     let instrs = dewimplify_stmt(
                         stmt,
                         &mut blockresult,
@@ -1474,22 +1475,19 @@ fn dewimplify_with_expected_output() {
                     instrs_from_wimpl.extend(instrs);
                 }
 
-                // FIXME delete debug
-                print!(
-                    "\n PARAMS {:?} AND PARAM COUNT {} \n",
-                    &params_from_wimpl,
-                    &params_from_wimpl.len()
-                );
-                // FIXME delete debug
-                print!(
-                    "\n RETURNS {:?} \n",
-                    &returns_from_wimpl,
-                );
+                // FIXME @Dmitrii delete debug
+                // print!(
+                //     "\n PARAMS {:?} AND PARAM COUNT {} \n",
+                //     &params_from_wimpl,
+                //     &params_from_wimpl.len()
+                // );
+                // FIXME @Dmitrii delete debug
+                print!("\n RETURNS {:?} \n", &returns_from_wimpl,);
 
-                // FIXME change that  when implementing the translation of several functions
+                // FIXME @Dmitrii change that  when implementing the translation of several functions
                 instrs_from_wimpl.push(wasm::Instr::End);
 
-                // FIXME can I make this more idiomatic?
+                // FIXME @Dmitrii can I make this more idiomatic?
                 // convert the hashmap into a vector of locals
                 let mut temp = Vec::new();
                 temp = locals_from_wimpl.iter().collect();
@@ -1505,13 +1503,13 @@ fn dewimplify_with_expected_output() {
                 return_types = returns_from_wimpl.values().cloned().collect();
                 // define the function type
                 let ftype = wasm::FunctionType::new(&param_types, &return_types);
-                
+
                 // checking that function type is the same
                 assert_eq!(
                     ftype_wasm,
                     ftype,
-                    //FIXME get rid of uppercase
-                    "\n FUNCTION TYPE from {} isn't the same as from {}\n",
+                    //FIXME @Dmitrii get rid of uppercase
+                    "\n FUNCTION TYPE from \n{} \nisn't the same as from \n{}\n",
                     wasm_path.display(),
                     wimpl_path.display()
                 );
@@ -1520,8 +1518,8 @@ fn dewimplify_with_expected_output() {
                 assert_eq!(
                     locals_from_wasm,
                     locals_from_wimpl,
-                    //FIXME get rid of uppercase
-                    "\nLOCALS from {} aren't the same as from {}\n",
+                    //FIXME @Dmitrii get rid of uppercase
+                    "\nLOCALS from \n{} \naren't the same as from \n{}\n",
                     wasm_path.display(),
                     wimpl_path.display()
                 );
@@ -1530,7 +1528,7 @@ fn dewimplify_with_expected_output() {
                 assert_eq!(
                     instrs_from_wasm,
                     instrs_from_wimpl,
-                    //FIXME get rid of uppercase
+                    //FIXME @Dmitrii get rid of uppercase
                     "\nINSTRUCTIONS from {} aren't the same as from {}\n",
                     wasm_path.display(),
                     wimpl_path.display()
@@ -1538,17 +1536,16 @@ fn dewimplify_with_expected_output() {
 
                 ast_tests += 1;
 
-
-                // TODO abstract into a utility function?
+                // TODO @Dmitrii abstract into a utility function?
                 // store a vector of instructions into a WASM Module
                 // init a wasm module
                 let mut m = wasm::Module::new();
                 // add functions to the module
-                // currently supports only one function
                 m.functions = vec![wasm::Function::new(
+                    // currently supports only one function
                     ftype,
                     wasm::Code::new(),
-                    vec!["test".to_string()],
+                    vec!["test".to_string()], // exported name of the function
                 )];
                 // provide instructions vector generated from wimpl as a body of the function code
                 m.functions[0]
@@ -1561,8 +1558,8 @@ fn dewimplify_with_expected_output() {
                     .expect("No code present in this function!")
                     .locals = locals_from_wimpl;
 
-                // FIXME: debug - delete
-                print!("\n NEW WASM MODULE: {:?}\n", m);
+                // FIXME @Dmitrii debug - delete
+                // print!("\n NEW WASM MODULE: {:?}\n", m);
 
                 // copy wasm path
                 let mut p = wasm_path.to_path_buf();
@@ -1577,14 +1574,51 @@ fn dewimplify_with_expected_output() {
                 m.to_file(&p);
 
                 // check that the validation is successful
-                assert!(test_utilities::wasm_validate(&p.as_path()) == Ok(()));
+                assert!(test_utilities::wasm_validate(&p.as_path()) == Ok(())); // wat2wasm has to be on the path
 
+                // test that the original wasm binary and the regenerated one evaluate to the same thing
+                use std::process::Command; // import a process builder
+
+                let mut run_wasm = Command::new("wasmtime"); // execute wasmtime command
+                                                             // wasmtime has to be on the path
+
+                // TODO @Dmitrii: to avoid copying code, can refactor this as a function with path string as a parameter
+                let og_output = run_wasm
+                    .arg(wasm_path.as_os_str()) // full path to the original wasm file
+                    .arg("--invoke") // invoke the provided function within the module
+                    .arg("test") // export name of the function to invoke
+                    .args(["10", "20"]) // function arguments
+                    // currently support only two arguments
+                    .output()
+                    .expect("wasmtime failed to execute");
+
+                // FIXME @Dmitrii debug delete
+                println!("\n OUTPUT: {:?}", og_output);
+
+                let new_output = run_wasm
+                    .arg(p.as_os_str()) // full path to the regenerated wasm file
+                    .arg(wasm_path.as_os_str()) // full path to the original wasm file
+                    .arg("--invoke") // invoke the provided function within the module
+                    .arg("test") // export name of the function to invoke
+                    .args(["10", "20"]) // function arguments
+                    // currently support only two arguments
+                    .output()
+                    .expect("wasmtime failed to execute");
+
+                assert_eq!(
+                    og_output, new_output,
+                    "\nExpected \n{:?} \nand \n{:?} to be equal\n",
+                    og_output, new_output
+                );
+
+                // FIXME ? @Dmitrii not removing files to have result files for inspection
                 // delete a temporary test file
-                remove_file(p);
+                // remove_file(p);
             }
         }
+        // }
     }
 
-    // FIXME delete debug
+    // FIXME @Dmitrii delete debug
     print!("\nASTs compared: {}\n", ast_tests);
 }

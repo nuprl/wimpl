@@ -1,0 +1,10 @@
+// Test 1 = PASS Testing for a stack variable evaluating to a constant
+s0: i32 = i32.const 20
+// s1: i32 = i32.const 10 // FIXME @Dmitrii multi value results are not supported yet (only wasm MVP is supported)
+r0: i32 = s0
+// r1: i32 = s1
+
+// Test 2 = FAIL because s0 is off the stack already and there is only one parameter for i32.add
+// s0: i32 = i32.const 1
+// s1: i32 = i32.eqz(s0)
+// s2: i32 = i32.add (s0, s1)

@@ -4,4 +4,5 @@
     f32.neg
     drop 
   )
+  (export "test" (func $0))
 )

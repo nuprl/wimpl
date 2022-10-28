@@ -3,4 +3,5 @@
     i32.const 3
     drop
   )
+  (export "test" (func $0))
 )

@@ -4,4 +4,5 @@
     f32.sqrt
     drop 
   )
+  (export "test" (func $0))
 )

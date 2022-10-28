@@ -5,4 +5,5 @@
     i32.or
     drop 
   )
+  (export "test" (func $0))
 )

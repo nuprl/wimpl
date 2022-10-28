@@ -4,4 +4,5 @@
     f32.ceil
     drop 
   )
+  (export "test" (func $0))
 )

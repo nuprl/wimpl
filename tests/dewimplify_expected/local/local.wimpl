@@ -1,16 +1,14 @@
 // Local initialization:
-// hint: this corresponds to (local i32 i32) (local i32 i32) in wat
-// ??? are l& values in wimpl parsed as local init in wimpl ast?
+// hint @Dmitrii : this corresponds to (local i32 i32) (local i32 i32) in wat
 l0: i32 = i32.const 0
 l1: i64 = i64.const 0
 l2: i32 = i32.const 0
 l3: i32 = i32.const 0
 
-// hint: we're changing the value of the first parameter
+// hint @Dmitrii : we're changing the value of the first parameter
 p0: i32 = i32.add(p0, p1)
-// ??? are p& values in wimpl parsed as parameter value setting in wimpl ast?
 
-// hint: this corresponds to local.tee where the value of paramater1(local1 in wat) is being set to 30 and put on stack (s0 = p1)
+// hint @Dmitrii : this corresponds to local.tee where the value of paramater1(local1 in wat) is being set to 30 and put on stack (s0 = p1)
 p1: i32 = i32.const 30
 s0: i32 = p1
 
@@ -19,5 +17,3 @@ l0: i32 = i32.const 31
 l1: i64 = i64.const 42
 
 r0: i32 = i32.add(i32.add(s0, l0), p0)
-
-// ??? are l2 and l3 just unused? what happens to them in wimpl ast?

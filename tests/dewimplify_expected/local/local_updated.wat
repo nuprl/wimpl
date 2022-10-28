@@ -9,6 +9,7 @@
   (func $2 (param i32) 
   	nop
   )
+  (export "test" (func $1))
 )
 
 

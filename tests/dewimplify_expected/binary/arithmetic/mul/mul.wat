@@ -5,4 +5,5 @@
     i32.mul
     drop 
   )
+  (export "test" (func $0))
 )

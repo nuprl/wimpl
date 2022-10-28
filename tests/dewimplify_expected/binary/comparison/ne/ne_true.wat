@@ -5,4 +5,5 @@
     i32.ne
     drop 
   )
+  (export "test" (func $0))  
 )

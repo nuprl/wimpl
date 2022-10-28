@@ -1,5 +1,5 @@
 (;
-Hint: an if or else block that drops the value is going to be parsed into wimpl such that both if and else bodies are _empty_ !
+hint @Dmitrii : an if or else block that drops the value is going to be parsed into wimpl such that both if and else bodies are _empty_ !
 ;)
 
 (module
@@ -12,4 +12,5 @@ Hint: an if or else block that drops the value is going to be parsed into wimpl 
 		  )
 		)                 
     )
+  (export "test" (func $0))
 )

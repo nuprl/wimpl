@@ -4,4 +4,5 @@
     f32.nearest
     drop 
   )
+  (export "test" (func $0))
 )

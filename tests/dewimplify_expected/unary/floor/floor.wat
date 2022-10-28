@@ -4,4 +4,5 @@
     f32.floor
     drop 
   )
+  (export "test" (func $0))
 )

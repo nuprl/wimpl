@@ -5,4 +5,5 @@
     i32.sub
     drop 
   )
+  (export "test" (func $0))
 )
