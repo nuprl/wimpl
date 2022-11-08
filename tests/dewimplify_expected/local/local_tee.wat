@@ -1,7 +1,7 @@
 (module
   (func $f0
 
-    ;; FIXME @Dmitrii: had to change the name of the local from @l0 to no name since wimpl doesn't support named locals
+    ;; FIXME @Dmitrii: had to change the name of the local from @l0 to no name since wimpl doesn't produce named locals and locals-to-locals comparison tests didn't pass
 
     (local i32)
 
@@ -20,7 +20,7 @@
     ;; The same exact code with local.set and local.get instead of local.tee
     i32.const 3   ;; [3]
     local.set 0 ;; [], {$l0 -> 3}
-    local.get 0 ;; [3], {$l0 -> 3}
+    local.get 0 ;; [3], {$s0 -> 3}
     i32.const 7   ;; [3, 7]
     local.set 0 ;; [3], {$l0 -> 7}
     local.get 0 ;; [3, 7]

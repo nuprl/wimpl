@@ -2,6 +2,7 @@
   (type (;0;) (func (param i32 i32) ))
   (func $1 (type 0) (param i32 i32) 
     (loop 
+    ;; hint @Dmitrii : this loop construct is not being looped to 
     	local.get 0
     	call $2    	
 		i32.const 42

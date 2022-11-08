@@ -1,0 +1,4 @@
+// this loop doesn't loop
+@label1: loop {
+  p0: i32 = i32.add(p0, i32.const 1)
+}

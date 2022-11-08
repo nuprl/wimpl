@@ -1,0 +1,9 @@
+// @Dmitrii testing different drop combinations
+@label1: block { 
+b1: i32 = i32.const 4 
+}
+s0: i32 = b1
+@label2: block { 
+b2: i32 = i32.const 5 
+}
+r0: i32 = i32.add(s0, b2)

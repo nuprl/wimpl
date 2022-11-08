@@ -1,0 +1,102 @@
+loop.wimpl
+
+Stmt {
+    id: #1,
+    kind: Assign {
+        lhs: Local(
+            0,
+        ),
+        type_: I32,
+        rhs: Expr {
+            id: #0,
+            kind: Const(
+                I32(
+                    0,
+                ),
+            ),
+        },
+    },
+},
+Stmt {
+    id: #11,
+    kind: Loop {
+        begin_label: Label(
+            1,
+        ),
+        body: Body(
+            [
+                Stmt {
+                    id: #5,
+                    kind: Assign {
+                        lhs: Local(
+                            0,
+                        ),
+                        type_: I32,
+                        rhs: Expr {
+                            id: #4,
+                            kind: Binary(
+                                I32Add,
+                                Expr {
+                                    id: #2,
+                                    kind: VarRef(
+                                        Local(
+                                            0,
+                                        ),
+                                    ),
+                                },
+                                Expr {
+                                    id: #3,
+                                    kind: Const(
+                                        I32(
+                                            1,
+                                        ),
+                                    ),
+                                },
+                            ),
+                        },
+                    },
+                },
+                Stmt {
+                    id: #10,
+                    kind: If {
+                        condition: Expr {
+                            id: #8,
+                            kind: Binary(
+                                I32LtS,
+                                Expr {
+                                    id: #6,
+                                    kind: VarRef(
+                                        Local(
+                                            0,
+                                        ),
+                                    ),
+                                },
+                                Expr {
+                                    id: #7,
+                                    kind: Const(
+                                        I32(
+                                            10,
+                                        ),
+                                    ),
+                                },
+                            ),
+                        },
+                        if_body: Body(
+                            [
+                                Stmt {
+                                    id: #9,
+                                    kind: Br {
+                                        target: Label(
+                                            1,
+                                        ),
+                                    },
+                                },
+                            ],
+                        ),
+                        else_body: None,
+                    },
+                },
+            ],
+        ),
+    },
+},

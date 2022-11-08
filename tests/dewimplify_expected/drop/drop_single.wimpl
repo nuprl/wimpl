@@ -1,0 +1,3 @@
+// FIXME @Dmitrii test this when module parsing is implemented; currently this wimpl cannot be correctly parsed
+// Drop of constants is optimized out
+// i32.const 3

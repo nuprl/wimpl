@@ -1,0 +1,44 @@
+loop.wasm
+
+[
+Loop(
+    BlockType(
+        None,
+    ),
+),
+Local(
+    Get,
+    Local 0,
+),
+Const(
+    I32(
+        1,
+    ),
+),
+Binary(
+    I32Add,
+),
+Local(
+    Set,
+    Local 0,
+),
+Local(
+    Get,
+    Local 0,
+),
+Const(
+    I32(
+        10,
+    ),
+),
+Binary(
+    I32LtS,
+),
+BrIf(
+    Label(
+        0,
+    ),
+),
+End,
+End,
+],
