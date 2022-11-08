@@ -224,6 +224,20 @@
 
 **🔥 Test features bit by bit**
 
+~~- [V] restore br_if~~~
+~~- [V] restore br_if_triple_nested~~~
+~~- [V] test br~~~
+~~- [V] test locals~~~
+~~- [V] test blocks~~~
+~~- [V] test ifs~~~
+~~- [V] test drops~~~
+
+~~- [V] Loops~~
+~~    - breeak to a loop jumps to the start of the loop~~
+~~    - [V] make a test with br_if to loop~~
+~~    - [V] make loop logic~~
+~~      - push frame onto the stack in the loop~~
+
 - ??? what to do with drop production for cases like br_if_result? Bs are being reassigned
   ~~- [V] pass brresults **map** as an arg to dewimp stmt~~
     ~~- [V] replace blockresult_count logic with set processing~~
@@ -231,18 +245,7 @@
   - ??? what is the purpose of reassignement?
   - ??? why first `b1` is not assigned to `s0`? and why not second `b1` made `= s0` ?
 
-- [V] restore br_if
-- [V] restore br_if_triple_nested
-- [V] test br
-- [V] test locals
-- [V] test blocks
-- [V] test ifs
-- [V] test drops
-
-- [ ] Loops
-    - breeak to a loop jumps to the start of the loop
-    - [ ] make a test with br_if to loop
-  - processed similar to blocks
+- [ ] BrTbl
 
 - [ ] Create SAME TEST parametrized
   - [ ] Do NOT delete the old ones (make a copy folder)
@@ -256,9 +259,6 @@
   - [ ] block_result
   - [ ] block_single
   - [ ] br_nested_simple
-
-
-- [ ] BrTbl
 
 ===
 

@@ -1351,6 +1351,7 @@ fn dewimplify_stmt(
                     .expect("Expected a given label to be on the stack!"); // we count the index from the innermost (current) block
             instrs.push(wasm::Instr::Br(wasm::Label::from(wasm_target))); // pass the index as the label value and add the Br instruction with that label to the list
         }
+        // FIXME @Dmitrii abstract away the similar logic of block and loop?
         // process statements inside the block body
         StmtKind::Block { body, end_label } => {
             let mut frame = BlockFrame {
@@ -1401,7 +1402,40 @@ fn dewimplify_stmt(
 
             block_stack.pop(); // pop the frame off the stack when exiting the block
         }
-        StmtKind::Loop { begin_label, body } => (),
+        // FIXME @Dmitrii abstract away the similar logic of block and loop?
+        StmtKind::Loop { begin_label, body } => {
+            let mut frame = BlockFrame {
+                // init a block frame for this loop
+                label: begin_label,
+                result_type: BlockType(None), // by default the result is None
+                // FIXME @Dmitrii delete if redundant
+                //results: Vec::new(),          // and the list of instructions is emtpy
+                is_if: false,
+            };
+            block_stack.push(frame); // add a loop frame on the stack
+
+            let mut loop_instr = Vec::new(); // init a list of instruction within the loop
+            for stmt in body.0 {
+                // process the instructions
+                loop_instr.extend(dewimplify_stmt(
+                    stmt,
+                    params_num,
+                    locals,
+                    block_stack,
+                    result_stack,
+                ));
+            }
+
+            let frame = block_stack
+                .last()
+                .expect("Expected the stack to be non-empty");
+
+            instrs.push(wasm::Instr::Loop(frame.result_type)); // push the Loop instruction
+            instrs.extend(loop_instr); // push instruction from inside the loop
+            instrs.push(wasm::Instr::End); // every loop ends with and End
+
+            block_stack.pop(); // pop the frame off the stack when exiting the block
+        }
         StmtKind::If {
             condition,
             if_body,
@@ -1529,7 +1563,7 @@ fn dewimplify_with_expected_output() {
 
     // FIXME @Dmitrii change back to parent directory
     // define a path to the parent directory with all test directories and files
-    const DEWIMPL_TEST_INPUTS_DIR: &'static str = "tests/dewimplify_expected/loop/";
+    const DEWIMPL_TEST_INPUTS_DIR: &'static str = "tests/dewimplify_expected/";
 
     // Sort for deterministic order.
     let mut files: Vec<PathBuf> = WalkDir::new(&DEWIMPL_TEST_INPUTS_DIR)
