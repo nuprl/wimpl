@@ -1,0 +1,32 @@
+Block(
+    BlockType(
+        Some(
+            I64,
+        ),
+    ),
+),
+Const(
+    I64(
+        42,
+    ),
+),
+Const(
+    I32(
+        1,
+    ),
+),
+BrTable {
+    table: [
+        Label(
+            1,
+        ),
+        Label(
+            0,
+        ),
+    ],
+    default: Label(
+        1,
+    ),
+},
+End,
+End,

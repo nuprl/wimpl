@@ -142,7 +142,7 @@
 
 ~~- [V] fix Drops~~
   ~~- [V] test with wasmtime without stmts comparisons *FAILS*~~
-  ~~  - [V] test the original block_nested test => see if wimp~~l optimizations check out *FAILS*~~
+  ~~  - [V] test the original block_nested test => see if wimpl optimizations check out *FAILS*~~
   ~~    - [V] see how and when drops are inserted (wasm from wimpl doesn't have a drop at the end of the function - why?)~~
         ~~- ??? why is there a drop after stmt::expr ?~~
          ~~- *because I was inserting drops after simple Expr stmts like add.wat test (which basically was an end of a function)*~~
@@ -160,7 +160,7 @@
               ~~  - So is there ever a decrease in result_count happening?~~
               ~~    - when B is reffed inside an operator, an **operator itself** also produces a result!~~
               ~~      - but what to do with B = B assignments?!~~
-              ~~        - **!!!** Bs mentions with Expr stmt don’t matter ~~if these stmts are not assigned to Bs or results => **decrease** result count when there is B Ref~~
+              ~~        - **!!!** Bs mentions with Expr stmt don’t matter if these stmts are not assigned to Bs or results => **decrease** result count when there is B Ref~~
               ~~    *ASSUMPTION*: there can’t be a reference to a B within a B or R within an R (because neither exists before they are declared)~~
               ~~  - [X] Compare Return count and B count at the end of function dewimpl => add as many drops as there is a difference between the two~~
         
@@ -238,18 +238,47 @@
 ~~    - [V] make loop logic~~
 ~~      - push frame onto the stack in the loop~~
 
-- ??? what to do with drop production for cases like br_if_result? Bs are being reassigned
-  ~~- [V] pass brresults **map** as an arg to dewimp stmt~~
-    ~~- [V] replace blockresult_count logic with set processing~~
-    ~~- [V] test that the result assigned != current result; if it is - skip~~
-  - ??? what is the purpose of reassignement?
-  - ??? why first `b1` is not assigned to `s0`? and why not second `b1` made `= s0` ?
+=== Week 7.11 ===
 
 - [ ] BrTbl
+  ~~- ??? why in br_table.wimpl `@label0` is not assigned to anything in the code? how do we know where label0 is? *label0 actually refers to the function -> br label0 exits the function*~~
+  
+  How it works:
+    - value on top of the stack specifies **an index** into the table of br_table
+      - a table consists of block indeces to which the br jumps
+        - **last** value specified in the table is **the default block index to break to** (we jump to it when the value on top of the stack is greater than the size_of_the_table - 2)
+      - if br is not wrapped in a block, then br 0 leads to exiting a function
+  
+  Implementation:
+    - switch stmt has `index`, `cases` and `default`
+      - index = condition
+      - default has a body of stmts
+      - cases has several bodies of stmts
+    - ??? how to deal with bs and rs getting assigned the same value all over?
+    - ??? how to deal with index that jumps out of a whole function (we haven't parsed it yet)
+    - ??? pass the table vector around
+      - ??? refactor dewimplify_switch into a sep function
 
-- [ ] Create SAME TEST parametrized
-  - [ ] Do NOT delete the old ones (make a copy folder)
-    - [ ] blocks, drops, locals, brs first
+    1. parse body
+       - `case_body` function???
+         1. pick the last stmt of the body and parse as br
+         2. br_tab function passes a vector of indeces
+         - or maybe I could just return the labeled br instr and extract the label from there
+         1. br function takes in arg `is_table`
+          - if `is_table` -> don't process like break, but push label into the index vector
+            - ??? how to process the actual index of the br?
+              - [ ] maybe, if exceeds limits -> return block_stack.len()
+    2. push `index` onto the instr stack
+    3. push br_table with generated vector of indeces last
+  
+  - ??? technically, `br_table_result` could be optimized such that putting the const on the stack is the only instruction made, right?
+
+  - [ ] test br_table with parameters as switch values https://musteresel.github.io/posts/2020/01/webassembly-text-br_table-example.html
+  - [ ] test the second example there (without globals probably)
+
+- [ ] function call
+  - [ ] test `local_updated` after call implemented
+  - [ ] test `drop_later` when call implemented
 
 - [ ] return all (potentially) deleted tests (wat to wasm)
   - [ ] restore drop_order.wasm
@@ -260,15 +289,32 @@
   - [ ] block_single
   - [ ] br_nested_simple
 
-===
+- ??? what to do with drop production for cases like br_if_result? Bs are being reassigned
+  ~~- [V] pass brresults **map** as an arg to dewimp stmt~~
+    ~~- [V] replace blockresult_count logic with set processing~~
+    ~~- [V] test that the result assigned != current result; if it is - skip~~
+  - ??? what is the purpose of reassignement?
+  - ??? why first `b1` is not assigned to `s0`? and why not second `b1` made `= s0` ?
 
-- [ ] function call
-  - [ ] test `local_updated` after call implemented
-  - [ ] test `drop_later` when call implemented
+- ??? Can’t test Multipl Returs because multiple values are not supported by wimplify (only WASM MVP is supported)
+
+- ??? How are stack variables produced by wimplify?
+  - Short answer, stack variables are produced whenever there’s an “effect-ful” instruction, ie, the instructions in wimplify that have a call to materialize_as_statements (or a function with a similar name)
+  - ??? How stack vars work for `drop_order.wat` ? Why some consts are just expressions and some are stack vars?
+  - ??? How stack variable production affects drop insertion logic?
+
+- ??? Do we assume wimpl to be handwritten? If we do, it might change the logic of how s0 are put on the stack and dropped. In particular, we’d have to add drops differently
+
+- ??? ❓ Show how drops are implemented and do a sanity check. Can there be a case that by dropping values at the very end we are dropping actual results vs unused values?
+
+- ??? How crucial is implementing select / qs / memory / load_store ?
+
+- [ ] Create SAME TEST parametrized
+  - [ ] Do NOT delete the old ones (make a copy folder)
+    - [ ] blocks, drops, locals, brs first
 
 
-
-=== *waiting on parse.rs rewrire (after ~11.11)* ===
+=== *waiting on parse.rs rewrire (after ~18.11)* ===
 
 - [ ] Assign -> Global
 - ❓ waiting on Michelle to implement the parser 

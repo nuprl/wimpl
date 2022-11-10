@@ -1548,7 +1548,7 @@ fn dewimplify_stmt(
             index,
             cases,
             default,
-        } => todo!(),
+        } => (),
     }
     return instrs;
 }
@@ -1563,7 +1563,7 @@ fn dewimplify_with_expected_output() {
 
     // FIXME @Dmitrii change back to parent directory
     // define a path to the parent directory with all test directories and files
-    const DEWIMPL_TEST_INPUTS_DIR: &'static str = "tests/dewimplify_expected/";
+    const DEWIMPL_TEST_INPUTS_DIR: &'static str = "tests/dewimplify_expected/br_table";
 
     // Sort for deterministic order.
     let mut files: Vec<PathBuf> = WalkDir::new(&DEWIMPL_TEST_INPUTS_DIR)

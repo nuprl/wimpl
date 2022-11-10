@@ -1,0 +1,131 @@
+Stmt {
+        id: #11,
+        kind: Block {
+            body: Body(
+                [
+                    Stmt {
+                        id: #10,
+                        kind: Switch {
+                            index: Expr {
+                                id: #0,
+                                kind: Const(
+                                    I32(
+                                        1,
+                                    ),
+                                ),
+                            },
+                            cases: [
+                                Body(
+                                    [
+                                        Stmt {
+                                            id: #2,
+                                            kind: Assign {
+                                                lhs: Return(
+                                                    0,
+                                                ),
+                                                type_: I64,
+                                                rhs: Expr {
+                                                    id: #1,
+                                                    kind: Const(
+                                                        I64(
+                                                            42,
+                                                        ),
+                                                    ),
+                                                },
+                                            },
+                                        },
+                                        Stmt {
+                                            id: #3,
+                                            kind: Br {
+                                                target: Label(
+                                                    0,
+                                                ),
+                                            },
+                                        },
+                                    ],
+                                ),
+                                Body(
+                                    [
+                                        Stmt {
+                                            id: #5,
+                                            kind: Assign {
+                                                lhs: BlockResult(
+                                                    1,
+                                                ),
+                                                type_: I64,
+                                                rhs: Expr {
+                                                    id: #4,
+                                                    kind: Const(
+                                                        I64(
+                                                            42,
+                                                        ),
+                                                    ),
+                                                },
+                                            },
+                                        },
+                                        Stmt {
+                                            id: #6,
+                                            kind: Br {
+                                                target: Label(
+                                                    1,
+                                                ),
+                                            },
+                                        },
+                                    ],
+                                ),
+                            ],
+                            default: Body(
+                                [
+                                    Stmt {
+                                        id: #8,
+                                        kind: Assign {
+                                            lhs: Return(
+                                                0,
+                                            ),
+                                            type_: I64,
+                                            rhs: Expr {
+                                                id: #7,
+                                                kind: Const(
+                                                    I64(
+                                                        42,
+                                                    ),
+                                                ),
+                                            },
+                                        },
+                                    },
+                                    Stmt {
+                                        id: #9,
+                                        kind: Br {
+                                            target: Label(
+                                                0,
+                                            ),
+                                        },
+                                    },
+                                ],
+                            ),
+                        },
+                    },
+                ],
+            ),
+            end_label: Label(
+                1,
+            ),
+        },
+    },
+    Stmt {
+        id: #13,
+        kind: Assign {
+            lhs: Return(
+                0,
+            ),
+            type_: I64,
+            rhs: Expr {
+                id: #12,
+                kind: VarRef(
+                    BlockResult(
+                        1,
+                    ),
+                ),
+            },
+        },
+    },
