@@ -1,3 +1,4 @@
+use std::iter::zip;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -615,14 +616,28 @@ fn wimplify_with_expected_output() {
                 println!("\t{}", wimpl_path.display());
                 
                 let wimpl_module = Module::from_wasm_file(wasm_path).unwrap();
-
+                println!("{}", wimpl_module);
+                
                 // Every wimpl file contains only a sequence of statements, not a whole module.
                 // Compare the first function from the .wasm binary, with all instructions of the
                 // .wimpl text file.
-                let actual = wimpl_module.functions[0].clone().body.expect("the first function of the example should not be imported");
-                let expected = Body(Stmt::from_text_file(&wimpl_path).expect("could not parse Wimpl text file"));
-
-                assert_eq!(actual, expected, "\ntestcase: {}\nexpected Wimpl: {}\nproduced Wimpl: {}\n", wimpl_path.display(), expected, actual);
+                //let actual = wimpl_module.functions[0].clone().body.expect("the first function of the example should not be imported");
+                let expected = Module::from_text_file(&wimpl_path).expect("could not parse"); 
+                
+                // We have to compare the everything in the module apart from the metadate. 
+                // Right now, we only compare the vector of functions 
+                                
+                for (actual, expected) in zip(wimpl_module.functions, expected.functions) {
+                    
+                    // For now, we only check that the name, type and body are as expected. 
+                    assert_eq!(actual.name, expected.name, "\ntestcase: {}\nexpected Wimpl: {}\nproduced Wimpl: {}\n", wimpl_path.display(), expected.name, actual.name);    
+                    assert_eq!(actual.type_, expected.type_, "\ntestcase: {}\nexpected Wimpl: {}\nproduced Wimpl: {}\n", wimpl_path.display(), expected.type_, actual.type_);
+                    assert_eq!(actual.body, expected.body, "\ntestcase: {}\nexpected Wimpl: {:?}\nproduced Wimpl: {:?}\n", wimpl_path.display(), expected.body, actual.body);
+                }
+                
+                //println!("{:?}", expected);
+                //let expected = Body(Stmt::from_text_file(&wimpl_path).expect("could not parse Wimpl text file"));
+                //assert_eq!(actual, expected, "\ntestcase: {}\nexpected Wimpl: {}\nproduced Wimpl: {}\n", wimpl_path.display(), expected, actual);
             }
         }
     }

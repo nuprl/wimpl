@@ -162,7 +162,7 @@ fn ws(input: &str) -> NomResult<()> {
 fn var(input: &str) -> NomResult<Var> {
     map_res(alphanumeric1, Var::from_str)(input)
 }
-fn func(input: &str) -> NomResult<FunctionId> {
+fn func_id(input: &str) -> NomResult<FunctionId> {
     map_res(alphanumeric1, FunctionId::from_str)(input)
 }
 fn label(input: &str) -> NomResult<Label> {
@@ -268,7 +268,7 @@ fn expr(input: &str) -> NomResult<Expr> {
     );
 
     let call = map(
-        tuple((tag("call"), ws, func, ws, arg_list)),
+        tuple((tag("call"), ws, func_id, ws, arg_list)),
         |(_, (), func, (), args)| Call { func, args }
     );
 
@@ -412,6 +412,105 @@ fn stmt(input: &str) -> NomResult<Stmt> {
 
 // Adapt the nom parsers above such that they can be used with Rust `parse()` / `from_str`.
 
+// func $0 (p0: i32, p1: i32) -> (i32) 
+
+fn param_list(input: &str) -> NomResult<Vec<ValType>> {
+    
+    fn param (input: &str) -> NomResult<ValType> {
+        let (input, _) = var(input)?;
+        let (input, _) = ws(input)?;
+        let (input, _) = tag(":")(input)?;
+        let (input, _) = ws(input)?;
+        val_type(input)
+    }
+
+    delimited(
+        pair(tag("("), ws),
+        separated_list0(tuple((ws, tag(","), ws)), param),
+        pair(ws, tag(")")),
+    )(input)
+}
+
+fn result_list (input: &str) -> NomResult<Vec<ValType>> {
+    delimited(
+        pair(tag("("), ws),
+        separated_list0(tuple((ws, tag(","), ws)), val_type),
+        pair(ws, tag(")")),
+    )(input)
+}
+
+fn function (input: &str) -> NomResult<Function> {
+    let (input, _) = tag("func")(input)?;
+    let (input, _) = ws(input)?;
+    
+    println!("input: {:?}", input);
+    let (input, name) = func_id(input)?;
+    let (input, _) = ws(input)?;
+    println!("name: {:?}", name);
+
+    let (input, param) = param_list(input)?;
+    
+    let (input, _) = ws(input)?;
+    let (input, _) = tag("->")(input)?;
+    let (input, _) = ws(input)?;
+    let (input, result) = result_list(input)?;
+    let (input, _) = ws(input)?;
+    
+    let (input, body) = body(input)?;
+     
+    Ok((
+        input, 
+        Function {
+            name,
+            type_: FunctionType::new(&param, &result),
+            body: Some(body),
+            export: Vec::new(),
+    })) 
+}
+
+fn functions_ws (input: &str) -> NomResult<Vec<Function>> {
+    preceded(ws, many0(terminated(function, ws)))(input)    
+}
+
+fn module (input: &str) -> NomResult<Module> {
+    
+    fn module_body(input: &str) -> NomResult<Vec<Function>> {
+        delimited(tag("{"), functions_ws, tag("}"))(input)
+    }
+    
+    let (input, _) = tag("module")(input)?;
+    let (input, _) = ws(input)?;
+
+    let (input, functions) = module_body(input)?;
+
+    Ok((
+        input,
+        Module {
+        functions,
+        globals: Vec::new(),
+        table: None,
+        metadata: Metadata::default(),
+    }))
+}
+
+impl Module {
+    pub fn from_text_file(filename: impl AsRef<Path>) -> io::Result<Module> {
+        let str = std::fs::read_to_string(filename)?;
+        Self::from_str(&str).map_err(|e| io::Error::new(ErrorKind::Other, e))
+    }    
+}
+
+impl Function {
+    pub fn from_str_multiple(input: &str) -> Result<Vec<Self>, ParseError> {
+        adapt_nom_parser(functions_ws, input)
+    }
+
+    pub fn from_text_file(filename: impl AsRef<Path>) -> io::Result<Vec<Function>> {
+        let str = std::fs::read_to_string(filename)?;
+        Self::from_str_multiple(&str).map_err(|e| io::Error::new(ErrorKind::Other, e))
+    }    
+}
+
 impl Stmt {
     pub fn from_str_multiple(input: &str) -> Result<Vec<Self>, ParseError> {
         adapt_nom_parser(stmts_ws, input)
@@ -423,6 +522,22 @@ impl Stmt {
     pub fn from_text_file(filename: impl AsRef<Path>) -> io::Result<Vec<Self>> {
         let str = std::fs::read_to_string(filename)?;
         Self::from_str_multiple(&str).map_err(|e| io::Error::new(ErrorKind::Other, e))
+    }
+}
+
+impl FromStr for Module {
+    type Err = ParseError;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        adapt_nom_parser(module, input)
+    }
+}
+
+impl FromStr for Function {
+    type Err = ParseError;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        adapt_nom_parser(function, input)
     }
 }
 

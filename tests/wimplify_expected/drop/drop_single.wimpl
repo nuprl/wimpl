@@ -1,2 +1,7 @@
-// Drop of constants is optimized out
-// i32.const 3
+module {
+    func f0 () -> () {
+        // Drop of constants is optimized out
+        // i32.const 3
+        nop
+    }
+}

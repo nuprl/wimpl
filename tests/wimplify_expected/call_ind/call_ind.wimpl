@@ -1,1 +1,9 @@
-call_indirect []->[] (i32.const 0) ()
+module {
+    func f0 () -> () {
+        call_indirect []->[] (i32.const 0) ()
+    }
+    func indirect () -> () {
+        nop
+    }
+}
+
