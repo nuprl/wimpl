@@ -7,6 +7,5 @@ module {
     }
   }
   func f1 (p0: i32) -> () {
-    nop
   }
 }

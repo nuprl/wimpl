@@ -10,6 +10,5 @@ module {
     i32.add(b1, i32.const 42)
   }
   func f1 (p0: i32) -> () {
-    nop
   }
 }

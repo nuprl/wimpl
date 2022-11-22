@@ -1,4 +1,4 @@
-modulel {
+module {
     func f0 () -> () {
         @label1: block {
             // Drops of constants are optimized away

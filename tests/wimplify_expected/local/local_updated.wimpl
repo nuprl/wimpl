@@ -1,3 +1,8 @@
-s0: i32 = p0
-p0: i32 = i32.const 42
-call f1 (s0)
+module {
+    func f0 (p0: i32, p1: i32) -> () {
+        s0: i32 = p0
+        p0: i32 = i32.const 42
+        call f1 (s0)
+    }
+    func f1 (p0: i32) -> () {}
+}

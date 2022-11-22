@@ -813,6 +813,14 @@ fn wimplify_function_body(
 }
 
 pub fn wimplify(module: &wasm::Module) -> Result<Module, String> {
+    
+    // TODO: Ask Daniel why on earth this is neccesary. 
+    // Right now if you have a function that is exported, its name is its export name 
+    // and the names of the function below it are -1 of what they should be. 
+    // See: produced wimpl code for test wimplify_expected/call/call.wimpl 
+    // Also, when functions have names eg: func $constant in test wimplify_expected/constant/const.wimpl
+    // the internal name is lost during translation.
+
     // Generate unique function ids for each function in the module.
     let func_orig_idx_to_id_map = FunctionId::from_module(module);
 

@@ -8,6 +8,5 @@ module {
         // but because drop of variable references is optimized, no statement is actually produced
     }
     func f1 (p0: i32) -> () {
-        nop
     }
 }

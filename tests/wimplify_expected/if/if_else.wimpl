@@ -8,7 +8,6 @@ module {
       }
     }
   }
-  func f1 () -> () {
-    nop
+  func f1 (p0: i32) -> () {
   }
 }

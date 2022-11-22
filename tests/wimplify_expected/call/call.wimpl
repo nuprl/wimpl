@@ -1,4 +1,5 @@
 module {
+    export "f"
     func f1 () -> () {
         // Drop of constants is optimized out
         // i32.const 0
