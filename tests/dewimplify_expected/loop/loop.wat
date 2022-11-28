@@ -1,5 +1,5 @@
 (module
-  (func
+  (func $1
     ;; create a local variable (by default initialized to 0)
     (local i32)
     (loop
@@ -15,4 +15,5 @@
       br_if 0
     )
   )
+  (export "test" (func $1))
 )

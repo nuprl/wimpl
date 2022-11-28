@@ -7,4 +7,5 @@
         end
         drop 
     )
+    (export "test" (func $1))
 )

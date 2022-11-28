@@ -1159,8 +1159,7 @@ pub fn wimplify(module: &wasm::Module) -> Result<Module, String> {
 fn dewimplify_expr(
     expr: Expr,
     params_num: u32,
-    type_: Option<ValType>,
-    result_stack: &mut HashMap<u32, Vec<wasm::Instr>>,
+    result_map: &mut HashMap<u32, Vec<wasm::Instr>>,
 ) -> Vec<wasm::Instr> {
     let mut instrs = Vec::new();
     match expr.kind {
@@ -1187,7 +1186,7 @@ fn dewimplify_expr(
                     ));
                 }
                 Var::BlockResult(label) => {
-                    result_stack.remove(&label); // when the blockresult is referenced, it's no longer on the stack
+                    result_map.remove(&label); // when the blockresult is referenced, it's no longer on the stack
                 }
                 Var::Return(_) => (),
             }
@@ -1196,7 +1195,7 @@ fn dewimplify_expr(
         ExprKind::MemorySize => todo!(),
         ExprKind::MemoryGrow { pages } => todo!(),
         ExprKind::Unary(op, e) => {
-            for i in dewimplify_expr(*e, params_num, type_, result_stack) {
+            for i in dewimplify_expr(*e, params_num, result_map) {
                 instrs.push(i);
             }
             instrs.push(wasm::Instr::Unary(op));
@@ -1204,10 +1203,10 @@ fn dewimplify_expr(
         ExprKind::Binary(op, ex1, ex2) => {
             // hint @Dmitrii : * is for unboxing (dereferencing) a heap pointer
             // unroll the result of the expression into the vector of instructions
-            for instr in dewimplify_expr(*ex1, params_num, type_, result_stack) {
+            for instr in dewimplify_expr(*ex1, params_num, result_map) {
                 instrs.push(instr)
             }
-            for instr in dewimplify_expr(*ex2, params_num, type_, result_stack) {
+            for instr in dewimplify_expr(*ex2, params_num, result_map) {
                 instrs.push(instr)
             }
             instrs.push(wasm::Instr::Binary(op));
@@ -1235,7 +1234,7 @@ fn dewimplify_stmt(
     params_num: u32,
     locals: &mut HashMap<u32, Local>,
     block_stack: &mut Vec<BlockFrame>,
-    result_stack: &mut HashMap<u32, Vec<wasm::Instr>>,
+    result_map: &mut HashMap<u32, Vec<wasm::Instr>>,
 ) -> Vec<wasm::Instr> {
     let mut instrs = Vec::new();
 
@@ -1245,7 +1244,7 @@ fn dewimplify_stmt(
         StmtKind::Unreachable => todo!(),
         // process all expressions with dewimplify_expr
         StmtKind::Expr(e) => {
-            instrs.extend(dewimplify_expr(e, params_num, None, result_stack));
+            instrs.extend(dewimplify_expr(e, params_num, result_map));
             instrs.push(wasm::Instr::Drop);
         }
         StmtKind::Assign { lhs, type_, rhs } => {
@@ -1253,7 +1252,7 @@ fn dewimplify_stmt(
             let mut rhs_instr = Vec::new();
 
             // process the righthand side expression
-            for i in dewimplify_expr(rhs, params_num, Some(type_), result_stack) {
+            for i in dewimplify_expr(rhs, params_num, result_map) {
                 rhs_instr.push(i);
             }
 
@@ -1314,7 +1313,7 @@ fn dewimplify_stmt(
                     // FIXME @Dmitrii probably an is_if check is redundant
                     // if label of the top of the stack matches the assignee label and the block has _not_ been marked as `if` (if it was, we are in an else condition )
                     {
-                        if let Some(vec) = result_stack.get_mut(&label) {
+                        if let Some(vec) = result_map.get_mut(&label) {
                             // if stack of results already contains a result for this block
                             if *vec == rhs_instr {
                                 // and it's equal to value assigned here
@@ -1324,18 +1323,18 @@ fn dewimplify_stmt(
                             }
                         } else {
                             // if the result is new and not on the stack of results
-                            result_stack.insert(label, rhs_instr.to_vec()); // add it to the result stack
+                            result_map.insert(label, rhs_instr.to_vec()); // add it to the result stack
                         }
                     };
 
                     instrs.extend(rhs_instr);
                 }
                 Var::Return(idx) => {
-                    for _i in 0..result_stack.len() {
-                        // add as many drops before the return result, as there are blockresults left on the stack
+                    for _i in 0..result_map.len() {
+                        // add as many drops before the return result, as there are blockresults left on the stack 
                         instrs.push(wasm::Instr::Drop);
                     }
-                    result_stack.clear(); // no results left on the stack at this point
+                    result_map.clear(); // no results left on the stack at this point
                     instrs.extend(rhs_instr); // append the righthand side instructions to the list
                 }
             }
@@ -1343,12 +1342,14 @@ fn dewimplify_stmt(
         StmtKind::Store { op, addr, value } => todo!(),
         StmtKind::Br { target } => {
             // FIXME @Dmitrii refactor this in a separate function (also used in If for BrIfs)
-            // wasm target label index corresponds to the level of block nesting, counting from innermost to outermost block
+            // let wasm_target = block_stack.len() - target.0 as usize; // wasm target label index corresponds to the level of block nesting, counting from innermost to outermost block
+
             let wasm_target = (block_stack.len() - 1)
                 - block_stack
                     .into_iter()
                     .position(|f| f.label == target)
                     .expect("Expected a given label to be on the stack!"); // we count the index from the innermost (current) block
+
             instrs.push(wasm::Instr::Br(wasm::Label::from(wasm_target))); // pass the index as the label value and add the Br instruction with that label to the list
         }
         // FIXME @Dmitrii abstract away the similar logic of block and loop?
@@ -1372,7 +1373,7 @@ fn dewimplify_stmt(
                     params_num,
                     locals,
                     block_stack,
-                    result_stack,
+                    result_map,
                 ));
             }
 
@@ -1422,7 +1423,7 @@ fn dewimplify_stmt(
                     params_num,
                     locals,
                     block_stack,
-                    result_stack,
+                    result_map,
                 ));
             }
 
@@ -1442,7 +1443,7 @@ fn dewimplify_stmt(
             else_body,
         } => {
             let mut conditions = Vec::new(); // process instructions for the if condition into a separate vector
-            conditions.extend(dewimplify_expr(condition, params_num, None, result_stack));
+            conditions.extend(dewimplify_expr(condition, params_num, result_map));
 
             if let Some(stmt) = if_body.0.last() {
                 if let StmtKind::Br { target } = stmt.kind {
@@ -1459,17 +1460,20 @@ fn dewimplify_stmt(
                             params_num,
                             locals,
                             block_stack,
-                            result_stack,
+                            result_map,
                         ));
                     } // process the rest of the stmts
                     instrs.extend(conditions); // push conditions
 
                     // FIXME @Dmitrii refactor this in a separate function (also used in Br)
-                    let wasm_target = (block_stack.len() - 1) // wasm target label index corresponds to the level of block nesting, counting from innermost to outermost block
+                    // let wasm_target = block_stack.len() - target.0 as usize; // wasm target label index corresponds to the level of block nesting, counting from innermost to outermost block
+
+                    let wasm_target = (block_stack.len() - 1)
                         - block_stack
-                            .iter_mut()
+                            .into_iter()
                             .position(|f| f.label == target)
                             .expect("Expected a given label to be on the stack!"); // we count the index from the innermost (current) block
+
                     instrs.push(wasm::Instr::BrIf(wasm::Label::from(wasm_target))); // pass the index as the label value and add the Br instruction with that label to the list
                     block_stack
                         .last_mut()
@@ -1490,7 +1494,7 @@ fn dewimplify_stmt(
                     params_num,
                     locals,
                     block_stack,
-                    result_stack,
+                    result_map,
                 ));
             }
             instrs.push(wasm::Instr::If(
@@ -1528,7 +1532,7 @@ fn dewimplify_stmt(
                         params_num,
                         locals,
                         block_stack,
-                        result_stack,
+                        result_map,
                     ));
                 }
                 // FIXME @Dmitrii delete if redundant
@@ -1542,13 +1546,61 @@ fn dewimplify_stmt(
             }
 
             // FIXME @Dmitrii delete if redundant
-            //block_stack.pop(); // the last block on the stack is the wrapper around the if statement, so pop it
+            // block_stack.pop(); // the last block on the stack is the wrapper around the if statement, so pop it
         }
         StmtKind::Switch {
             index,
             cases,
             default,
-        } => (),
+        } => {
+            let mut switch_results = result_map.clone();
+            let mut process_body = |mut b: Body| {
+                let mut body_results = result_map.clone();
+                let mut body_labels = Vec::new();
+                // closure for processing body of stmts
+                let mut body_instr = Vec::new();
+                if let Some(StmtKind::Br { target }) = b.0.last().map(|s| s.to_owned().kind)
+                // take last statement of each switch case (should be a Br statement) and extract target label
+                {
+                    // FIXME @Dmitrii refactor this in a separate function (also used in Br)
+                    // let wasm_target = block_stack.len() - target.0 as usize; // wasm target label index corresponds to the level of block nesting, counting from innermost to outermost block
+
+                    let wasm_target = (block_stack.len() - 1)
+                        - block_stack
+                            .into_iter()
+                            .position(|f| f.label == target)
+                            .expect("Expected a given label to be on the stack!"); // we count the index from the innermost (current) block
+
+                    body_labels.push(wasm::Label::from(wasm_target)); // add label to the vector of labels
+                    b.0.pop(); // remove Br from the statements stack
+                }
+                for s in b.0 {
+                    // run the dewimpl_stmt w/o using the output (to update the stack and the map)
+                    body_instr.extend(dewimplify_stmt(
+                        s,
+                        params_num,
+                        locals,
+                        block_stack,
+                        &mut body_results,
+                    ));
+                }
+                switch_results.extend(body_results);
+                (body_instr, body_labels)
+            };
+
+            let mut cases_labels = Vec::new(); // init a vector of labels used in the br_table
+            for b in cases {
+                cases_labels.extend(process_body(b).1);
+            }
+            let (mut switch_instr, default_label) = process_body(default); // process the `default`
+            result_map.extend(switch_results); // add all unique switch results to the main results map
+            switch_instr.extend(dewimplify_expr(index, params_num, result_map)); // process and push `index` to the stack
+            switch_instr.push(wasm::Instr::BrTable {
+                table: cases_labels,
+                default: default_label[0],
+            });
+            instrs.extend(switch_instr);
+        }
     }
     return instrs;
 }
@@ -1563,7 +1615,7 @@ fn dewimplify_with_expected_output() {
 
     // FIXME @Dmitrii change back to parent directory
     // define a path to the parent directory with all test directories and files
-    const DEWIMPL_TEST_INPUTS_DIR: &'static str = "tests/dewimplify_expected/br_table";
+    const DEWIMPL_TEST_INPUTS_DIR: &'static str = "tests/dewimplify_expected/";
 
     // Sort for deterministic order.
     let mut files: Vec<PathBuf> = WalkDir::new(&DEWIMPL_TEST_INPUTS_DIR)
@@ -1612,7 +1664,14 @@ fn dewimplify_with_expected_output() {
                 println!("\n WIMPL STMTS FROM WIMPL:\n {:#?}", stmts);
 
                 // init the stack of blocks that dewimplify recurses into during translation
-                let mut block_stack = Vec::new();
+                let mut block_stack = vec![
+                    // add the start of the function as a frame (to be able to refer to the start of the function as the Br target label)
+                    BlockFrame {
+                        label: Label(0),
+                        result_type: BlockType(None), // by default the result is None
+                        is_if: false,
+                    },
+                ];
 
                 // init the list of locals acquired from wimpl <usize idx, Local loc>
                 let mut locals_from_wimpl = HashMap::new();
@@ -1621,7 +1680,7 @@ fn dewimplify_with_expected_output() {
                 let mut instrs_from_wimpl = Vec::new();
 
                 // Initialize a block result counter - it is used to compare with the number of returns of the function and drop values that are not returned
-                let mut result_stack = HashMap::new();
+                let mut result_map = HashMap::new();
 
                 // Push the dewimplified instructions into the vector
                 for stmt in stmts.iter().cloned() {
@@ -1631,20 +1690,21 @@ fn dewimplify_with_expected_output() {
                         params_num,
                         &mut locals_from_wimpl,
                         &mut block_stack,
-                        &mut result_stack,
+                        &mut result_map,
                     );
                     // unroll the result of the dewimplification into the vector of instructions
                     instrs_from_wimpl.extend(instrs);
                 }
 
                 // FIXME @Dmitrii change that  when implementing the translation of several functions
-                for _i in 0..result_stack.len() {
-                    // add drops if there are still results left on the stack
+                for _i in 0..result_map.len() {
+                    // add drops if there are still results left on the stack 
                     instrs_from_wimpl.push(wasm::Instr::Drop);
                 }
+                // FIXME @Dmitrii delete debug
                 // FIXME @Dmitrii change that  when implementing the translation of several functions
                 instrs_from_wimpl.push(wasm::Instr::End);
-
+                
                 // FIXME @Dmitrii can I make this more idiomatic?
                 // convert the hashmap into a vector of locals
                 let mut temp = Vec::new();
@@ -1652,139 +1712,144 @@ fn dewimplify_with_expected_output() {
                 temp.sort_by(|a, b| (*a).0.cmp((*b).0));
                 // redifine the type and value of locals_from_wimpl
                 let locals_from_wimpl = temp.iter().map(|t| (*t).1.to_owned()).collect();
-
+                
                 // FIXME @Dmitrii parse ftype from wimpl module when implemented
                 // define the function type
                 // let ftype = wasm::FunctionType::new(&param_types, &return_types);
-
+                
                 // FIXME @Dmitrii parse ftype from wimpl module when implemented
                 // checking that function type is the same
                 // assert_eq!(
-                //     ftype_wasm,
-                //     ftype,
-                //     //FIXME @Dmitrii get rid of uppercase
-                //     "\n FUNCTION TYPE from \n{} \nisn't the same as from \n{}\n",
-                //     wasm_path.display(),
-                //     wimpl_path.display()
-                // );
+                    //     ftype_wasm,
+                    //     ftype,
+                    //     //FIXME @Dmitrii get rid of uppercase
+                    //     "\n FUNCTION TYPE from \n{} \nisn't the same as from \n{}\n",
+                    //     wasm_path.display(),
+                    //     wimpl_path.display()
+                    // );
+                    
+                    // FIXME @Dmitrii delete as redundant???
+                    // checking that function locals are the same
+                    // assert_eq!(
+                        //     locals_from_wasm,
+                        //     locals_from_wimpl,
+                        //     //FIXME @Dmitrii get rid of uppercase
+                        //     "\nLOCALS from \n{} \naren't the same as from \n{}\n",
+                        //     wasm_path.display(),
+                        //     wimpl_path.display()
+                        // );
+                        
+                        // FIXME ? @Dmitrii not removing files to have result files for inspection
+                        // delete a temporary test file
+                        // remove_file(p);
+                        
+                        // FIXME @Dmitrii delete debug
+                        println!(
+                            "\n WIMPL MODULE FROM WASM {:#?}",
+                            Module::from_wasm_file(&wasm_path)
+                        );
+                        
+                        // FIXME @Dmitrii delete debug
+                        println!("\n OG WASM MODULE FROM WASM {:#?}\n", module);
+                        
+                        // FIXME @Dmitrii delete debug
+                        print!("/n 🔥 BlockFrame length is {}/n", block_stack.len());
 
-                // FIXME @Dmitrii delete as redundant???
-                // checking that function locals are the same
-                // assert_eq!(
-                //     locals_from_wasm,
-                //     locals_from_wimpl,
-                //     //FIXME @Dmitrii get rid of uppercase
-                //     "\nLOCALS from \n{} \naren't the same as from \n{}\n",
-                //     wasm_path.display(),
-                //     wimpl_path.display()
-                // );
-
-                // FIXME ? @Dmitrii not removing files to have result files for inspection
-                // delete a temporary test file
-                // remove_file(p);
-
-                // FIXME @Dmitrii delete debug
-                println!(
-                    "\n WIMPL MODULE FROM WASM {:#?}",
-                    Module::from_wasm_file(&wasm_path)
-                );
-
-                // FIXME @Dmitrii delete debug
-                println!("\n OG WASM MODULE FROM WASM {:#?}\n", module);
-
-                // FIXME @Dmitrii debug - delete
-                // print!("\n NEW WASM MODULE FROM WIMPL: {:?}\n", m);
-
-                // FIXME @Dmitrii get rid of if checking through wasmtime?
-                // checking that function instructions are the same
-                assert_eq!(
-                    instrs_from_wasm,
-                    instrs_from_wimpl,
-                    //FIXME @Dmitrii get rid of uppercase
-                    "\nINSTRUCTIONS from {} aren't the same as from {}\n",
-                    wasm_path.display(),
-                    wimpl_path.display()
-                );
-
-                // TODO @Dmitrii abstract into a utility function?
-                // store a vector of instructions into a WASM Module
-                // init a wasm module
-                let mut m = wasm::Module::new();
-                // add functions to the module
-                m.functions = vec![wasm::Function::new(
-                    // currently supports only one function
-                    ftype_wasm, // FIXME @Dmitrii parse ftype from wimpl module when implemented
-                    wasm::Code::new(),
-                    vec!["test".to_string()], // exported name of the function
-                )];
-                // provide instructions vector generated from wimpl as a body of the function code
-                m.functions[0]
-                    .code_mut()
-                    .expect("No code present in this function!")
-                    .body = instrs_from_wimpl;
-                // provide locals vector generated from wimpl as a locals property of the function
-                m.functions[0]
-                    .code_mut()
-                    .expect("No code present in this function!")
-                    .locals = locals_from_wimpl;
-
-                // copy wasm path
-                let mut p = wasm_path.to_path_buf();
-                // extract the part of the file name string before the extension
-                let mut fl = p.file_stem().expect("Expect a file name").to_os_string();
-                // modify the file name string with `_temp_' and an extension
-                fl.push("_temp.wasm");
-                // set new file name
-                p.set_file_name(fl);
-
-                // write binary to a file at the path given above
-                m.to_file(&p)
-                    .expect("Expected a write to commence correctly!");
-
-                // check that the validation is successful
-                assert!(test_utilities::wasm_validate(&p.as_path()) == Ok(())); // wat2wasm has to be on the path
-
-                // test that the original wasm binary and the regenerated one evaluate to the same thing
-                use std::process::Command; // import a process builder
-
-                let mut run_wasm = Command::new("wasmtime"); // execute wasmtime command
-                                                             // wasmtime has to be on the path
-
-                // TODO @Dmitrii: to avoid copying code, can refactor this as a function with path string as a parameter
-                let og_output = run_wasm
-                    .arg(wasm_path.as_os_str()) // full path to the original wasm file
-                    .arg("--invoke") // invoke the provided function within the module
-                    .arg("test") // export name of the function to invoke
-                    .args(["10", "20"]) // function arguments
-                    // currently support only two arguments
-                    .output()
-                    .expect("wasmtime failed to execute");
-
-                let new_output = run_wasm
-                    .arg(p.as_os_str()) // full path to the regenerated wasm file
-                    .arg(wasm_path.as_os_str()) // full path to the original wasm file
-                    .arg("--invoke") // invoke the provided function within the module
-                    .arg("test") // export name of the function to invoke
-                    .args(["10", "20"]) // function arguments
-                    // currently support only two arguments
-                    .output()
-                    .expect("wasmtime failed to execute");
-
-                assert_eq!(
-                    og_output, new_output,
-                    "\nExpected \n{:?} \nand \n{:?} to be equal\n",
-                    og_output, new_output
-                );
-
-                // FIXME @Dmitrii debug delete
-                println!("\n OUTPUT: {:?}", og_output);
-
-                ast_tests += 1;
+                        // FIXME @Dmitrii debug - delete
+                        // print!("\n NEW WASM MODULE FROM WIMPL: {:?}\n", m);
+                        
+                        // FIXME @Dmitrii get rid of if checking through wasmtime?
+                        // checking that function instructions are the same
+                        assert_eq!(
+                            instrs_from_wasm,
+                            instrs_from_wimpl,
+                            //FIXME @Dmitrii get rid of uppercase
+                            "\nINSTRUCTIONS from {} aren't the same as from {}\n",
+                            wasm_path.display(),
+                            wimpl_path.display()
+                        );
+                        
+                        // TODO @Dmitrii abstract into a utility function?
+                        // store a vector of instructions into a WASM Module
+                        // init a wasm module
+                        let mut m = wasm::Module::new();
+                        // add functions to the module
+                        m.functions = vec![wasm::Function::new(
+                            // currently supports only one function
+                            ftype_wasm, // FIXME @Dmitrii parse ftype from wimpl module when implemented
+                            wasm::Code::new(),
+                            vec!["test".to_string()], // exported name of the function
+                        )];
+                        // provide instructions vector generated from wimpl as a body of the function code
+                        m.functions[0]
+                        .code_mut()
+                        .expect("No code present in this function!")
+                        .body = instrs_from_wimpl;
+                        // provide locals vector generated from wimpl as a locals property of the function
+                        m.functions[0]
+                        .code_mut()
+                        .expect("No code present in this function!")
+                        .locals = locals_from_wimpl;
+                        
+                        // copy wasm path
+                        let mut p = wasm_path.to_path_buf();
+                        // extract the part of the file name string before the extension
+                        let mut fl = p.file_stem().expect("Expect a file name").to_os_string();
+                        // modify the file name string with `_temp_' and an extension
+                        fl.push("_temp.wasm");
+                        // set new file name
+                        p.set_file_name(fl);
+                        
+                        // write binary to a file at the path given above
+                        m.to_file(&p)
+                        .expect("Expected a write to commence correctly!");
+                        
+                        // check that the validation is successful
+                        assert!(test_utilities::wasm_validate(&p.as_path()) == Ok(())); // wat2wasm has to be on the path
+                        
+                        // test that the original wasm binary and the regenerated one evaluate to the same thing
+                        use std::process::Command; // import a process builder
+                        
+                        let mut run_wasm = Command::new("wasmtime"); // execute wasmtime command
+                        // wasmtime has to be on the path
+                        
+                        // TODO @Dmitrii: to avoid copying code, can refactor this as a function with path string as a parameter
+                        let og_output = run_wasm
+                        .arg(wasm_path.as_os_str()) // full path to the original wasm file
+                        .arg("--invoke") // invoke the provided function within the module
+                        .arg("test") // export name of the function to invoke
+                        .args(["10", "20"]) // function arguments
+                        // currently support only two arguments
+                        .output()
+                        .expect("wasmtime failed to execute");
+                        
+                        let new_output = run_wasm
+                        .arg(p.as_os_str()) // full path to the regenerated wasm file
+                        .arg(wasm_path.as_os_str()) // full path to the original wasm file
+                        .arg("--invoke") // invoke the provided function within the module
+                        .arg("test") // export name of the function to invoke
+                        .args(["10", "20"]) // function arguments
+                        // currently support only two arguments
+                        .output()
+                        .expect("wasmtime failed to execute");
+                        
+                        
+                        assert_eq!(
+                            og_output, new_output,
+                            "\nExpected \n{:?} \nand \n{:?} to be equal\n",
+                            og_output, new_output
+                        );
+                        
+                        // FIXME @Dmitrii debug delete
+                        println!("\n OUTPUT: {:?}", og_output);
+                        
+                        ast_tests += 1;
+                    }
+                }
+                // }
             }
+            
+            // FIXME @Dmitrii delete debug
+            print!("\nASTs compared: {}\n", ast_tests);
         }
-        // }
-    }
-
-    // FIXME @Dmitrii delete debug
-    print!("\nASTs compared: {}\n", ast_tests);
-}
+        

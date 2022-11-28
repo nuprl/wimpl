@@ -1,0 +1,30 @@
+@label1: block {
+  
+  @label2: block {
+    if (i32.const 1) { 
+      b2: i64 = i64.const 1 
+    } else { 
+      b2: i64 = i64.const 2 
+    }
+  }
+
+  s0: i64 = b2
+
+  switch (i32.const 2) {
+    case 0: {
+      r0: i64 = s0
+      br @label0
+    }
+    case 1: {
+      b1: i64 = s0
+      br @label1
+    }
+    default: {
+      r0: i64 = s0
+      br @label0
+    }
+  }
+  
+}
+
+r0: i64 = b1

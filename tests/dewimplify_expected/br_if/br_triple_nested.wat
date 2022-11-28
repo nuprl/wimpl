@@ -1,5 +1,5 @@
 (module
-    (func $foo (param i32) (result i32)
+    (func $1 (param i32) (result i32)
        (local i32)
        (block
            (block
@@ -23,6 +23,9 @@
              local.set 1
              br 1)
          i32.const 99
-         local.set 1)
-       local.get 1)
+         local.set 1
+         )
+       local.get 1
+    )
+    (export "test" (func $1))
 )

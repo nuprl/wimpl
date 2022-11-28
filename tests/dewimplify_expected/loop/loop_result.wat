@@ -8,6 +8,7 @@
       i32.add
 	  )
   )
+  (export "test" (func $1))
 )
 
 

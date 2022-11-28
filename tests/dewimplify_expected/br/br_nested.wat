@@ -9,4 +9,5 @@
 			end			
         end
     )
+    (export "test" (func $1))
 )

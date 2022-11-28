@@ -8,4 +8,5 @@
 			local.set 1
         )
     )
+	(export "test" (func $1))
 )

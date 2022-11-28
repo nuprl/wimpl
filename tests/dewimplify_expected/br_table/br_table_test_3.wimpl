@@ -1,0 +1,25 @@
+@label1: block {
+  @label2: block {
+    switch (i32.const 2) {
+      case 0: {
+        b1: i64 = i64.const 42
+        br @label1
+      }
+      case 1: {
+        b2: i64 = i64.const 42
+        br @label2
+      }
+      case 2: {
+        b1: i64 = i64.const 42
+        br @label1
+      }
+      default: {
+        r0: i64 = i64.const 42
+        br @label0
+      }
+    }
+  }
+  b1: i64 = i64.const 0
+  // ??? so this doesn't work because there should be a drop before `i64.const 0`
+}
+r0: i64 = i64.const 1
