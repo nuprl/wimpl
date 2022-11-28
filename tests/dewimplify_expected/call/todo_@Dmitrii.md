@@ -296,7 +296,13 @@
 
 ~~- ??? ❓ Show how drops are implemented and do a sanity check. Can there be a case that by dropping values at the very end we are dropping actual results vs unused values?~~
 
-- [ ] test everything again (since changed the wasm_target logic)
+~~- [V] test everything again (since changed the wasm_target logic)~~
+
+=== ** ===
+
+- ??? gotta refactor a bunch, esp separate function parsing, in order to implement the function call
+  - ??? `br_table_test_3.wimpl` - there should be a drop before `b1`s value in .wasm (see .wat) but our blockresult Assign logic doesn't push drops for blockresults. **Ideas? Just ignore this?**
+- ??? Can’t test Multipl Returs because multiple values are not supported by wimplify (only WASM MVP is supported)
 
 - [ ] function call
   - [ ] test `local_updated` after call implemented
@@ -319,11 +325,9 @@
   - [ ] test the second example there (without globals probably)
 
 
-  - ??? `br_table_test_3.wimpl` - there should be a drop before `b1`s value in .wasm (see .wat) but our blockresult Assign logic doesn't push drops for blockresults. **Ideas? Just ignore this?**
-- ??? Can’t test Multipl Returs because multiple values are not supported by wimplify (only WASM MVP is supported)
-
-
 === *waiting on parse.rs rewrire (after ~18.11)* ===
+
+- ??? is there a value in inserting asserts in each function like its done in wimplify?
 
 - [ ] Assign -> Global
 - ❓ waiting on Michelle to implement the parser 

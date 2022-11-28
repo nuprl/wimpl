@@ -1,0 +1,11 @@
+module {
+  export "f"
+  func f () -> () @label0: {
+    call f1 ()
+    i32.add(call f2 (i32.const 3, i32.const 42), i32.const 56)
+  }
+  func f1 () -> () @label0: {}
+  func f2 (p0: i32, p1: i32) -> (r0: i32) @label0: {
+    r0: i32 = i32.add(p0, p1)
+  }
+}
