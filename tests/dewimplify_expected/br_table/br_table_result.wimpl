@@ -1,5 +1,5 @@
 module {
-  func f0 () -> (r0: i64) @label0: {
+  func f0 () -> (i64) {
     @label1: block {
       switch (i32.const 1) {
         case 0: {
