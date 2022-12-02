@@ -300,9 +300,13 @@
 
 === ** ===
 
+
+~~- ??? is there a value in inserting asserts in each function like its done in wimplify? *not really, it's done there if wasm binary was modified manually; but no one modifies wimpl since its an IR*~~
+
 - ??? gotta refactor a bunch, esp separate function parsing, in order to implement the function call
-  - ??? `br_table_test_3.wimpl` - there should be a drop before `b1`s value in .wasm (see .wat) but our blockresult Assign logic doesn't push drops for blockresults. **Ideas? Just ignore this?**
-- ??? Can’t test Multipl Returs because multiple values are not supported by wimplify (only WASM MVP is supported)
+  - [ ] only call_evalution passes right now because of the parser
+  - [ ] push args as instrs, then the called function
+    - [ ] same for call indirect
 
 - [ ] function call
   - [ ] test `local_updated` after call implemented
@@ -327,7 +331,6 @@
 
 === *waiting on parse.rs rewrire (after ~18.11)* ===
 
-- ??? is there a value in inserting asserts in each function like its done in wimplify?
 
 - [ ] Assign -> Global
 - ❓ waiting on Michelle to implement the parser 
@@ -367,6 +370,13 @@
 - [ ] see what else can be refactored
 
 === *makes sense to do this after the refactoring above* ===
+
+- Can’t test Multipl Returs because multiple values are not supported by wimplify (only WASM MVP is supported)
+  - if fixed:
+    - [ ] fix br_table_test_3.wat
+      - `br_table_test_3.wimpl` - there should be a drop before `b1`s value in .wasm (see .wat) but our blockresult Assign logic doesn't push drops for blockresults. **Ideas? Just ignore this?**
+    - [ ] fix multiple returns logic
+    - [ ] change frame result type into vector of types
 
 - [ ] Set up dewimplify.rs and put all code there
 
