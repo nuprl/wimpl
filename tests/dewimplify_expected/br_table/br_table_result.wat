@@ -6,5 +6,4 @@
 			(br_table 1 0 1) ;; last is default  ;; @Dmitrii 1 0 1 are branch targets
 		)
 	)
-	(export "test" (func $1))
 )

@@ -5,32 +5,32 @@
 ~~// [V] gotta compare locals now in my tests (not just instructions)~~
 ~~// [V] set up module => functions[0] => code => locals and functions~~~~[V] => code => body from wimpl module => functions[0] => body~~
 
-~~// [V] count the number of params                    ~~
-~~    // - collect a params set in a *** separate pass ***~~
-~~        // - then pass the set to dewimpl statements fnc~~
+~~// [V] count the number of params~~
+    ~~// - collect a params set in a *** separate pass ***~~
+        ~~// - then pass the set to dewimpl statements fnc~~
 
 ~~// [V] pass locals as a param to dewimpl statements~~
 ~~// [V] pass returns as a param to dewimpl statements~~
 
 ~~// [V] process assigns~~
 
-~~        // [V] if lhs == local && local is not in locals~~
-~~            // vector of locals has to be set IN THE ORDER IT WAS DECLARED~~
-~~            // - add it to locals~~
-~~                // - get __only the type__~~
-~~                    // from Assign parameters~~
-~~        // [V] else~~
-~~            // parse the rhs: ~~
-~~                // VarRef => local.get (using the exact numbering for params and params+offset fo~~r locals) 
-~~                    // if VarRef to Stack => do nothing~~
-~~            // parse the lhs => local.set (using the exact numbering for params and params+offset~~ for locals)
+        ~~// [V] if lhs == local && local is not in locals~~
+            ~~// vector of locals has to be set IN THE ORDER IT WAS DECLARED~~
+~~            ~~// - add it to locals~~
+~~                ~~// - get __only the type__~~
+~~                    ~~// from Assign parameters~~
+~~        ~~// [V] else~~
+~~            ~~// parse the rhs: ~~
+~~                ~~// VarRef => local.get (using the exact numbering for params and params+offset fo~~r locals) 
+~~                    ~~// if VarRef to Stack => do nothing~~
+~~            ~~// parse the lhs => local.set (using the exact numbering for params and params+offset for locals)~~
 
-~~        // [V] stack locals => just translate them as their corresponding rhs?~~
-~~            // !! but that will lead to local.set+local.get translation instead of local.tee~~
-~~                // **do this as a first iteration**~~
-~~                // consider peek() and consume()~~
+~~        ~~// [V] stack locals => just translate them as their corresponding rhs?~~
+~~            ~~// !! but that will lead to local.set+local.get translation instead of local.tee~~
+~~                ~~// **do this as a first iteration**~~
+~~                ~~// consider peek() and consume()~~
 
-~~        // [V] returns - just parse the instrs?~~
+~~        ~~// [V] returns - just parse the instrs?~~
 
 ~~    // [V] store locals in function->code->locals~~
 
@@ -304,6 +304,33 @@
 ~~- ??? is there a value in inserting asserts in each function like its done in wimplify? *not really, it's done there if wasm binary was modified manually; but no one modifies wimpl since its an IR*~~
 
 - ??? gotta refactor a bunch, esp separate function parsing, in order to implement the function call
+
+    // 1. Logic
+    // 2. Naming
+    // 3. Structure refactoring
+
+
+    // TODO fn dewimplify module
+      // module -> fn
+      // [ ] how to process several functions within the module?
+          // [ ] transpile every function in the module in a loop
+      // why am I passing wasm_mod as an arg?
+
+    // [ ] **use Metadata struct !!!**
+
+
+    // ??? why wimpls look different? 
+    // ??? why am I getting a nom Some(tag) parsing error?
+
+
+
+    // TODO fn dewimplify function
+      // [ ] what is there to add to a function specifically?
+      //
+      // TODO @Dmitrii translate and dewimplify function
+      // a vector of initialized locals is added here
+
+
   - [ ] only call_evalution passes right now because of the parser
   - [ ] push args as instrs, then the called function
     - [ ] same for call indirect
