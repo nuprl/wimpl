@@ -1,1 +1,5 @@
-r0: i32 = i32.const 3 
+module {
+  func f0 () -> (i32) {
+    r0: i32 = i32.const 3
+  }
+}

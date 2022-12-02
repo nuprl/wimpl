@@ -1,7 +1,13 @@
-// Drop of constants is optimized out
-// i32.const 0
-call f1 ()
-i32.add(
-    call f2 (i32.const 3, i32.const 42), 
-    i32.const 56
-)
+module {
+    export "f"
+    func f1 () -> () {
+        // Drop of constants is optimized out
+        // i32.const 0
+        call f1()
+        i32.add(call f2 (i32.const 3, i32.const 42), i32.const 56)
+    }
+    func f2 () -> () {}
+    func f3 (p0: i32, p1: i32) -> (i32) {
+        r0: i32 = i32.add(p0, p1)
+    }
+}

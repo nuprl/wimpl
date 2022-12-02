@@ -1,3 +1,7 @@
-p0: i32 = i32.add(p0, p1) 
-p1: i32 = g0
-g0: i32 = p1
+module {
+  func f0 (p0: i32, p1: i32) -> () {
+    p0: i32 = i32.add(p0, p1) 
+    p1: i32 = g0
+    g0: i32 = p1
+  }
+}

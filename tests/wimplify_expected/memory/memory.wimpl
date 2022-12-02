@@ -1,1 +1,5 @@
-memory.grow(memory.size)
+module {
+  func f0 () -> () {
+    memory.grow(memory.size)
+  }
+}

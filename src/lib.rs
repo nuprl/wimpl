@@ -504,6 +504,21 @@ pub struct Table {
     pub export: Vec<String>,
 }
 
+// FIXME: remove
+impl Table {
+    fn default () -> Self {
+        Table {
+            limits: wasm::Limits{
+                initial_size: 0,
+                max_size: None,
+            },
+            import: None,
+            elements: Vec::new(),
+            export: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Element {
     pub offset: Vec<wasm::Instr>, // TODO shouldnt this be an expr?

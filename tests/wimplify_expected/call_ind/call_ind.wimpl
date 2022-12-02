@@ -1,1 +1,8 @@
-call_indirect []->[] (i32.const 0) ()
+module {
+    export "f"
+    func f0 () -> () {
+        call_indirect []->[] (i32.const 0) ()
+    }
+    func f1 () -> () {
+    }
+}
