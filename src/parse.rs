@@ -5,7 +5,7 @@ use std::str::FromStr;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_until, take_while, take_while1},
-    character::complete::{alphanumeric1, multispace1, not_line_ending, u32, alpha1},
+    character::complete::{alphanumeric1, multispace1, not_line_ending, u32, alpha1, digit1},
     combinator::{all_consuming, map, map_res, opt, value},
     multi::{many0, separated_list0},
     sequence::{delimited, pair, preceded, terminated, tuple},
@@ -98,19 +98,10 @@ impl FromStr for Var {
 }
 
 impl FromStr for FunctionId {
-    type Err = ();
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(if let Some(idx) = s.strip_prefix('f') {
-            let idx = idx.parse().map_err(|_| ())?;
-            FunctionId::Idx(idx)
-        } else {
-            // Functions must start with an alphabetic character, to avoid confusion with constants.
-            match s.chars().next() {
-                Some(c) if c.is_alphabetic() => FunctionId::Name(s.to_string().into()),
-                _ => return Err(()),
-            }
-        })
+        adapt_nom_parser(func_id, s)
     }
 }
 
@@ -162,7 +153,13 @@ fn var(input: &str) -> NomResult<Var> {
     map_res(alphanumeric1, Var::from_str)(input)
 }
 fn func_id(input: &str) -> NomResult<FunctionId> {
-    map_res(alphanumeric1, FunctionId::from_str)(input)
+    let name = map(
+        delimited(tag("`"), alphanumeric1, tag("`")), 
+        |str: &str| FunctionId::Name(ArcIntern::from(str.to_string()))); 
+    let idx = map_res(
+        preceded(tag("f"), digit1),
+        |str: &str| str.parse().map(FunctionId::Idx)); 
+    alt((name, idx))(input)
 }
 fn label(input: &str) -> NomResult<Label> {
     map_res(
@@ -480,6 +477,9 @@ fn function (input: &str) -> NomResult<Function> {
     let (input, _) = tag("func")(input)?;
     let (input, _) = ws(input)?;
     
+    // func (;0;)
+    // export "l" 
+
     // FIXME: Right now, somewhere in wimplify, the name of the function internally is switched with 
     // its export name. That's why if an export exists, I make it the name. 
     // This is uneccessary and frankly, should not be happening. 

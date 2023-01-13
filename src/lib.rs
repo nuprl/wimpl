@@ -124,6 +124,7 @@ pub enum FunctionId {
 }
 
 impl FunctionId {
+
     /// Map every function in the module to a name (if possible).
     /// If there are two functions with the same name, fall back for all of them to the index.
     /// (This way, the order of functions does not change the name assignment.)

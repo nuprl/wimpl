@@ -122,7 +122,7 @@ impl fmt::Display for Body {
 impl fmt::Display for FunctionId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FunctionId::Name(s) => write!(f, "{}", s),
+            FunctionId::Name(s) => write!(f, "`{}`", s),
             FunctionId::Idx(i) => write!(f, "f{}", i),
         }
     }

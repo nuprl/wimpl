@@ -62,6 +62,7 @@ fn dewimplify_expr(
                 instrs.extend(dewimplify_expr(a, params_num, result_map, id_map));
             }
             let temp = FunctionId::Idx(2);
+            
             instrs.push(wasm::Instr::Call(
                 *id_map.get(&func).expect("expected a function idx"), // pass function index from the map as a call parameter
             ));
