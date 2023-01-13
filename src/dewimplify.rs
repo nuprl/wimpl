@@ -61,8 +61,6 @@ fn dewimplify_expr(
             for a in args {
                 instrs.extend(dewimplify_expr(a, params_num, result_map, id_map));
             }
-            let temp = FunctionId::Idx(2);
-            
             instrs.push(wasm::Instr::Call(
                 *id_map.get(&func).expect("expected a function idx"), // pass function index from the map as a call parameter
             ));
@@ -472,7 +470,7 @@ fn dewimplify_function(
 ) -> wasm::Function {
     // get the vector of instructions from the wasm module
     let wasm_instr = wasm_f.instrs();
-    // FIXME @Dmitrii make more idiomatic without unwrap?
+
     // .locals for functions[i] won't help since it returns an <Idx, Local> iterator, where Idx has the true Idx of the local (= local_idx + param_count) – not the index of the local in wasm ast
     // get the vector of locals from the wasm module
     // copying it into a vector since otherwise it has to be borrowed
@@ -487,44 +485,32 @@ fn dewimplify_function(
     println!("\n WIMPL STMTS FROM WIMPL:\n {:#?}", wimpl_stmts); // FIXME here from stmt:from_text_file before
 
     // init the stack of blocks that dewimplify recurses into during translation
-    let mut block_stack = vec![
-        // add the start of the function as a frame (to be able to refer to the start of the function as the Br target label)
-        BlockFrame {
-            label: Label(0),
-            result_type: BlockType(None), // by default the result is None
-            is_if: false,
-        },
-    ];
+    // and add the start of the function as a frame (to be able to refer to the start of the function as the Br target label)
+    let mut block_stack = vec![BlockFrame {
+        label: Label(0),
+        result_type: BlockType(None), // by default the result is None
+        is_if: false,
+    }];
 
     // init the list of locals acquired from wimpl <usize idx, Local loc>
     let mut locals_from_wimpl = HashMap::new();
 
-    // Initialize a vector of Instructions
-    let mut instrs_from_wimpl = Vec::new();
-
     // Initialize a block result counter - it is used to compare with the number of returns of the function and drop values that are not returned
     let mut result_map = HashMap::new();
 
-    // Push the dewimplified instructions into the vector
-    for stmt in wimpl_stmts.iter().cloned() {
-        // TODO @Dmitrii change processing here to get other parts of the module besides the instructions
-        let instrs = dewimplify_stmt(
-            stmt,
+    let mut instrs_from_wimpl = wimpl_stmts.iter().fold(Vec::new(), |v, s| {
+        dewimplify_stmt(
+            s.clone(),
             params_num,
             &mut locals_from_wimpl,
             &mut block_stack,
             &mut result_map,
             id_map,
-        );
-        // unroll the result of the dewimplification into the vector of instructions
-        instrs_from_wimpl.extend(instrs);
-    }
+        )
+    });
 
-    // FIXME @Dmitrii change that  when implementing the translation of several functions
-    for _i in 0..result_map.len() {
-        // add drops if there are still results left on the stack
-        instrs_from_wimpl.push(wasm::Instr::Drop);
-    }
+    instrs_from_wimpl.extend(vec![wasm::Instr::Drop; result_map.len()]); // add drops if there are still results left on the stack
+
     // FIXME @Dmitrii delete debug
     // FIXME @Dmitrii change that  when implementing the translation of several functions
     instrs_from_wimpl.push(wasm::Instr::End);
@@ -596,15 +582,8 @@ fn dewimplify_function(
 fn dewimplify_module(wasm_mod: wasm::Module, wimpl_mod: Module) -> wasm::Module {
     use std::iter::zip;
 
-    // FIXME ? @Dmitrii not removing files to have result files for inspection
-    // delete a temporary test file
-    // remove_file(p);
-
     // FIXME @Dmitrii debug - delete
     // print!("\n NEW WASM MODULE FROM WIMPL: {:?}\n", m);
-
-    // TODO @Dmitrii abstract into a utility function?
-    // store a vector of instructions into a WASM Module
 
     let metadata = wimpl_mod.metadata; // extract metadata
 
@@ -618,26 +597,21 @@ fn dewimplify_module(wasm_mod: wasm::Module, wimpl_mod: Module) -> wasm::Module 
             wimpl_f,
             &metadata.func_id_to_orig_idx_map,
         ));
-    } // add functions to the module
+    }
 
     new_mod
 }
 
 #[test]
 fn dewimplify_with_expected_output() {
-    // TODO separate tests into dew with exp out?
-    // [ ] test first with call tests
-    // [ ] -> then rework other tests for proper module code
-
     use std::path::PathBuf;
-    use walkdir::WalkDir;
 
     // FIXME @Dmitrii change back to parent directory
     // define a path to the parent directory with all test directories and files
     const DEWIMPL_TEST_INPUTS_DIR: &str = "tests/dewimplify_expected/br_table";
 
     // Sort for deterministic order.
-    let mut files: Vec<PathBuf> = WalkDir::new(&DEWIMPL_TEST_INPUTS_DIR)
+    let mut files: Vec<PathBuf> = walkdir::WalkDir::new(&DEWIMPL_TEST_INPUTS_DIR)
         .into_iter()
         .map(|entry| entry.unwrap().path().to_owned())
         .collect();
@@ -679,14 +653,11 @@ fn dewimplify_with_expected_output() {
 
                 let dewimp_wasm = dewimplify_module(og_mod, wimpl_mod);
 
-                // copy wasm path
+                // copy the path and a set a new file name
                 let mut p = wasm_path.to_path_buf();
-                // extract the part of the file name string before the extension
-                let mut fl = p.file_stem().expect("Expect a file name").to_os_string();
-                // modify the file name string with `_temp_' and an extension
-                fl.push("_temp.wasm");
-                // set new file name
-                p.set_file_name(fl);
+                let mut file = p.file_stem().expect("Expect a file name").to_os_string();
+                file.push("_temp.wasm");
+                p.set_file_name(file);
 
                 // write binary to a file at the path given above
                 dewimp_wasm

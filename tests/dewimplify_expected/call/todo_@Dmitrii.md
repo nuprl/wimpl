@@ -316,6 +316,13 @@
           // [ ] transpile every function in the module in a loop
       // why am I passing wasm_mod as an arg?
 
+    // [ ] write function for functionID in lib.rs to extract the idx and use it in call translation
+
+    // [ ] tests
+      // - remove r0 and r1 etc
+      // - remove label0
+
+
     // [ ] **use Metadata struct !!!**
 
 
@@ -357,6 +364,14 @@
 
 
 === *waiting on parse.rs rewrire (after ~18.11)* ===
+
+
+  Refactoring:
+
+  - [ ] remove simple basic comments that are explained well by code
+  - [ ] leave extended comments on non-obvious decisions made in the code to explain it to my future 
+    - [ ] basically leave comments for Michelle to understand my code later
+
 
 
 - [ ] Assign -> Global
